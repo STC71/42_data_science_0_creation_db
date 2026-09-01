@@ -1,5 +1,9 @@
 # 🖥️ Ejercicio 01 – Show me your DB
 
+<p align="center">
+  <img src="../imgs/banner_01.jpg" alt="Piscine Data Science – Module 0 – ex00" width="100%">
+</p>
+
 [← Volver al README principal](../README.md)
 
 ---
