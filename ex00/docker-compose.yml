@@ -1,0 +1,71 @@
+# ==============================================================================
+# ARCHIVO DE CONFIGURACIÓN DE DOCKER COMPOSE PARA POSTGRESQL (PISCINE DATA SCIENCE)
+# Metáfora simple: Este archivo es como los planos de construcción para crear y 
+# amueblar una habitación virtual (un contenedor) dentro de tu ordenador.
+# ==============================================================================
+
+# Especificamos la versión del plano. 
+# Le dicimos a Docker qué herramientas y reglas debe usar.
+version: '3.8'
+
+# Aquí empieza la lista de todos los elementos o "servicios" que vamos a construir.
+services:
+
+  # "postgres" es el nombre que le damos a nuestro servicio 
+  # Puedes pensarlo como el nombre de la habitación.
+  postgres:
+  
+    # Indica el "modelo" o plantilla de fábrica que vamos a descargar de internet.
+    # En este caso, descargamos la versión exacta número 15 del sistema de base de datos PostgreSQL.
+    image: postgres:15
+    
+    # Indicamos el alias o nombre propio que llevará este contenedor una vez que esté encendido.
+    # Sirve para identificarlo fácilmente en tu terminal frente a otros contenedores.
+    container_name: postgres_piscineds
+    
+    # "environment" significa Ajustes del Entorno. Aquí configuramos las llaves y candados 
+    # de seguridad iniciales de nuestra base de datos.
+    environment:
+
+      # El nombre del administrador principal (el dueño de la base de datos, o sea: tu login). 
+      # ¡RECUERDA reemplazar «tu_login» por tu usuario real de 42 (ej: jsmith)!
+      POSTGRES_USER: «tu_login»
+      
+      # La contraseña secreta que te pedirá el comando 'psql' cuando intentes conectarte.
+      # La contraseña puede ser cualquier cosa, pero en este caso debemos a usar "mysecretpassword".
+      POSTGRES_PASSWORD: mysecretpassword
+      
+      # El nombre de la primera base de datos (el cajón de almacenamiento) que se creará automáticamente.
+      # En este caso, la llamaremos "piscineds" para que coincida con el nombre del proyecto.
+      POSTGRES_DB: piscineds
+      
+    # "ports" funciona como los canales de comunicación o "puertas de enlace".
+    # Algo así como un portero que permite que los programas de tu Equipo real (como tu terminal con psql) 
+    # puedan cruzar al contenedor.
+    # El formato es "PuertoDeTuEquipo : PuertoDentroDelContenedor".
+    # El puerto 5432 es la puerta estándar de PostgreSQL.
+    # ¿Por qué 5432? Porque es el puerto oficial que PostgreSQL usa para escuchar conexiones entrantes. 
+    # Si usaras otro puerto, tendrías que indicarle a tu terminal que se conecte a ese puerto específico,
+    # lo cual sería más complicado y confuso. Mantener el puerto 5432 hace que todo sea más sencillo 
+    # y compatible con la mayoría de las herramientas y tutoriales. 
+    ports:
+      - "5432:5432"
+      
+    # Los contenedores son "volátiles": si se apagan o destruyen, todo lo que guardaste dentro muere.
+    # Los "volumes" actúan como un disco duro externo. Esta línea enlaza una carpeta de tu máquina real 
+    # llamada 'postgres_data' con la carpeta interna del contenedor donde se guardan los datos reales.
+    # Así, aunque apagues la Equipo, tus tablas y progresos de la Piscine nunca se borrarán.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      
+    # Es la regla de supervivencia del contenedor. Le dice a tu Equipo que si el sistema
+    # de bases de datos se llega a apagar por un error físico o si reinicias la Equipo, 
+    # vuelva a encender el contenedor de inmediato de forma automática, a menos que tú lo apagues aposta.
+    restart: unless-stopped
+
+# Aquí declaramos de forma oficial el disco duro externo virtual mencionado arriba.
+# Le dice a Docker: "Sepárame de forma permanente un bloque de memoria con este nombre".
+# Es como si le dijeras a tu Equipo: "Crea un cajón especial llamado 'postgres_data' donde guardaré 
+# mis cosas importantes", o sea lo que está dentro de la base de datos.
+volumes:
+  postgres_data:
