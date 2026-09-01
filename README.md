@@ -54,7 +54,7 @@ Este módulo se centra en la **creación y carga inicial** de la base de datos.
 
 ---
 
-## ⚙️ Requisitos generales (Chapter I)
+## ⚙️ Requisitos generales
 
 - Trabaja desde un ordenador del cluster (VM o máquina física).
 - Si usas VM, instala y configura todo lo necesario.
@@ -90,7 +90,7 @@ Este módulo se centra en la **creación y carga inicial** de la base de datos.
 
 ---
 
-## 💡 Consejos de oro
+## 💡 Consejos
 
 1. **Usa `COPY`** en vez de `INSERT` fila a fila → es **mucho** más rápido.
 2. Comprueba siempre los tipos de datos reales del CSV antes de definir la tabla.
@@ -105,7 +105,7 @@ Este módulo se centra en la **creación y carga inicial** de la base de datos.
 - [Documentación oficial de PostgreSQL – Data Types](https://www.postgresql.org/docs/current/datatype.html)
 - [Documentación de COPY](https://www.postgresql.org/docs/current/sql-copy.html)
 - [Docker Compose – PostgreSQL](https://hub.docker.com/_/postgres)
-- Subject oficial de Inception (para buenas prácticas de Docker)
+- Subject oficial de Inception (para buenas prácticas de Docker) No disponible en este repositorio.
 
 ---
 

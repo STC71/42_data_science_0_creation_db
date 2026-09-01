@@ -128,3 +128,7 @@ PostgreSQL los acepta sin problema si no pones `NOT NULL`.
 
 - [← README principal](../README.md)
 - [← Ejercicio anterior: ex03](../ex03/README.md)
+
+---
+
+*Piscine Data Science – sternero – 42 Málaga – Septiembre de 2026*

@@ -103,3 +103,7 @@ Si usas Docker y reinicias el contenedor, la conexión sigue siendo la misma.
 - [← README principal](../README.md)
 - [← Ejercicio anterior: ex00](../ex00/README.md)
 - [Siguiente ejercicio: ex02 →](../ex02/README.md)
+
+---
+
+*Piscine Data Science – sternero – 42 Málaga – Septiembre de 2026*

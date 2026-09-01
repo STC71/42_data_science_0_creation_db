@@ -159,3 +159,7 @@ SELECT * FROM data_2022_oct LIMIT 5;
 - [← README principal](../README.md)
 - [← Ejercicio anterior: ex01](../ex01/README.md)
 - [Siguiente ejercicio: ex03 →](../ex03/README.md)
+
+---
+
+*Piscine Data Science – sternero – 42 Málaga – Septiembre de 2026*

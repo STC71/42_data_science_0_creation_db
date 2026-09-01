@@ -165,3 +165,7 @@ También es válida. Puedes hacer un bucle `for` que recorra los CSV y ejecute `
 - [← README principal](../README.md)
 - [← Ejercicio anterior: ex02](../ex02/README.md)
 - [Siguiente ejercicio: ex04 →](../ex04/README.md)
+
+---
+
+*Piscine Data Science – sternero – 42 Málaga – Septiembre de 2026*

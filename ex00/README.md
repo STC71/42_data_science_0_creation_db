@@ -250,3 +250,7 @@ docker logs --tail 20 postgres_piscineds
 
 - [← README principal](../README.md)
 - [Siguiente ejercicio: ex01 →](../ex01/README.md)
+
+---
+
+*Piscine Data Science – sternero – 42 Málaga – Septiembre de 2026*
