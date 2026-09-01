@@ -7,6 +7,10 @@
   <img src="https://img.shields.io/badge/Data%20Engineer-FF6B6B?style=for-the-badge" alt="Data Engineer">
 </p>
 
+<p align="center">
+  <img src="imgs/banner_0.jpg" alt="Piscine Data Science – Module 0" width="100%">
+</p>
+
 ---
 
 ## 🎯 ¿De qué trata este proyecto?
