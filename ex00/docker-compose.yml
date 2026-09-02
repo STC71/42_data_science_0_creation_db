@@ -4,9 +4,7 @@
 # amueblar una habitación virtual (un contenedor) dentro de tu ordenador.
 # ==============================================================================
 
-# Especificamos la versión del plano. 
-# Le dicimos a Docker qué herramientas y reglas debe usar.
-version: '3.8'
+# version: '3.8'
 
 # Aquí empieza la lista de todos los elementos o "servicios" que vamos a construir.
 services:
@@ -28,8 +26,8 @@ services:
     environment:
 
       # El nombre del administrador principal (el dueño de la base de datos, o sea: tu login). 
-      # ¡RECUERDA reemplazar «tu_login» por tu usuario real de 42 (ej: jsmith)!
-      POSTGRES_USER: «tu_login»
+      # ¡RECUERDA reemplazar el login por tu usuario real de 42 (ej: jsmith)!
+      POSTGRES_USER: sternero
       
       # La contraseña secreta que te pedirá el comando 'psql' cuando intentes conectarte.
       # La contraseña puede ser cualquier cosa, pero en este caso debemos a usar "mysecretpassword".

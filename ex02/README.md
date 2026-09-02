@@ -1,5 +1,9 @@
 # 📄 Ejercicio 02 – First table
 
+<p align="center">
+  <img src="../imgs/banner_02.jpg" alt="Piscine Data Science – Module 0 – ex02" width="100%">
+</p>
+
 [← Volver al README principal](../README.md)
 
 ---

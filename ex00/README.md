@@ -18,13 +18,273 @@ Crear una base de datos **PostgreSQL** lista para usar, con los siguientes datos
 | **Nombre de la BD**| `piscineds`                |
 | **Contraseña**     | `mysecretpassword`         |
 
-Debemos poder conectarnos con este comando:
+Debemos poder conectarnos con este comando (según el subject):
 
 ```bash
 psql -U «tu_login» -d piscineds -h localhost -W
 ```
 
 Cuando pida la contraseña, escribes: `mysecretpassword`
+
+---
+
+## 📁 Archivos a entregar
+
+Dentro de la carpeta `ex00/` debes entregar **uno** de estos archivos:
+
+- `docker-compose.yml`  ← **recomendado**
+- o `setup.sh`
+- o `VM-instructions.txt`
+
+---
+
+## 🧠 Explicación sencilla (para quien no sabe nada)
+
+Imagina que PostgreSQL es un **almacén grande y profesional**.  
+Docker es como una **caja mágica** que contiene ese almacén ya montado y listo para usar.  
+
+En vez de instalar PostgreSQL a mano (que puede ser complicado y diferente en cada ordenador), usamos Docker para que **todo el mundo tenga exactamente el mismo entorno**.
+
+---
+
+## 🚀 Cómo implementarlo paso a paso (opción recomendada: Docker)
+
+### Paso 1: Crear el archivo `docker-compose.yml`
+
+Abre un editor de texto y crea el archivo `ex00/docker-compose.yml` con este contenido:
+
+```yaml
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_piscineds
+    environment:
+      POSTGRES_USER: «tu_login»          # ← ¡Cambia esto por tu login real!
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: piscineds
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+**Importante:** sustituye `«tu_login»` por tu login real de 42 (ejemplo: `sternero`).
+
+> Se ha eliminado la línea `version: '3.8'` porque es obsoleta en las versiones modernas de Docker Compose.
+
+### Paso 2: Arrancar el servicio
+
+Abre una terminal en la carpeta `ex00/` y ejecuta:
+
+```bash
+docker-compose up -d
+```
+
+- `docker-compose` → lee el archivo de configuración
+- `up` → construye y levanta el servicio
+- `-d` → lo deja corriendo en segundo plano (detached)
+
+### Paso 3: Comprobar que el contenedor está vivo
+
+```bash
+docker ps
+```
+
+Debes ver algo similar a esto:
+
+```
+CONTAINER ID   IMAGE         ...   PORTS                                       NAMES
+xxxxxxxxxxxx   postgres:15   ...   0.0.0.0:5432->5432/tcp                      postgres_piscineds
+```
+
+---
+
+## 🔌 Cómo conectarse a la base de datos
+
+### Forma oficial del subject (cuando tienes `psql` instalado)
+
+```bash
+psql -U «tu_login» -d piscineds -h localhost -W
+```
+
+--- 
+
+### Forma mejorada (no hace falta instalar nada dentro del contenedor)
+
+La imagen oficial `postgres:15` **ya trae el comando `psql` instalado**.  
+Por eso este comando funciona perfectamente:
+
+```bash
+docker exec -it postgres_piscineds psql -U «tu_login» -d piscineds
+```
+
+---
+
+#### ¿Qué pasa si intentas hacer `apt install` dentro del contenedor?
+
+Puedes hacerlo, pero **no es recomendable** por estas razones:
+
+- Los cambios se pierden cuando borras o recreas el contenedor.
+- Estás modificando una imagen oficial (mala práctica).
+- No ganas casi nada, porque `psql` ya está disponible.
+
+Si aún así quieres probarlo (solo para experimentación):
+
+```bash
+# Entrar como root al contenedor
+docker exec -it -u root postgres_piscineds bash
+
+# Dentro del contenedor:
+apt update
+apt install -y postgresql-client
+
+# Salir
+exit
+```
+
+Pero RECUERDA: <br>
+Cuando haces docker-compose down, solo se destruye el contenedor (la “caja”), pero el volumen (el “disco duro”) sigue existiendo.<br>
+Al hacer up de nuevo, el nuevo contenedor se vuelve a conectar al mismo volumen y recupera todos los datos.<br>
+A menos que hagas esto otro:
+```bash
+docker-compose down -v  # Esto para el contenedor y borra los volúmenes (💥 SE PERDERÍA TODO 💥)
+```
+
+
+### Forma recomendada y práctica (usando Docker)
+
+En la mayoría de los ordenadores del campus **no está instalado el cliente `psql`**.  
+Instalarlo requiere permisos de administrador (`sudo`), algo que no siempre está disponible o no es conveniente.
+
+Por esa razón utilizamos el comando a través de Docker:
+
+```bash
+docker exec -it postgres_piscineds psql -U sternero -d piscineds
+```
+
+#### ¿Qué significa cada parte?
+
+| Parte                        | Significado |
+|-----------------------------|-----------|
+| `docker exec`               | Ejecuta un comando **dentro** de un contenedor que ya está corriendo |
+| `-it`                       | Modo interactivo + terminal (para poder escribir) |
+| `postgres_piscineds`        | Nombre del contenedor |
+| `psql -U sternero -d piscineds` | Entra a PostgreSQL con tu usuario y la base de datos |
+
+#### ¿Por qué no me pide la contraseña?
+
+Cuando usas `docker exec`, el comando `psql` se ejecuta **dentro del propio contenedor**.  
+Dentro del contenedor, PostgreSQL está configurado por defecto con autenticación `trust` para las conexiones locales (desde el mismo contenedor).  
+
+Por eso **no te pide contraseña**.  
+
+Esto es completamente normal y seguro en este contexto.  
+La contraseña `mysecretpassword` sigue existiendo y se usaría si te conectaras desde fuera del contenedor con el comando oficial del subject.
+
+---
+
+## Alias recomendado (muy útil)
+
+### ¿Qué es un alias?
+
+Un **alias** es simplemente un **apodo** o un **atajo** que le das a un comando largo.
+
+Imagina que cada vez que quieres entrar a la base de datos tienes que escribir esto:
+
+```bash
+docker exec -it postgres_piscineds psql -U sternero -d piscineds
+```
+
+Es largo y fácil de equivocarte.  
+Con un alias puedes crear un nombre corto (por ejemplo `pspiscine`) que haga exactamente lo mismo.
+
+### Cómo crear el alias
+
+Copia y pega este comando en tu terminal:
+
+```bash
+echo 'alias pspiscine="docker exec -it postgres_piscineds psql -U sternero -d piscineds"' >> ~/.zshrc
+```
+
+Luego recarga la configuración de tu terminal:
+
+```bash
+source ~/.zshrc
+```
+
+### ¿Qué ha pasado?
+
+A partir de ahora, cada vez que escribas:
+
+```bash
+pspiscine
+```
+
+será exactamente igual que haber escrito el comando largo.  
+Es como ponerle un botón rápido a una acción que haces muchas veces.
+
+### Ejemplo práctico
+
+**Antes** (comando largo):
+```bash
+docker exec -it postgres_piscineds psql -U sternero -d piscineds
+```
+
+**Después** (con el alias):
+```bash
+pspiscine
+```
+
+Ambos hacen exactamente lo mismo.
+
+---
+
+## Comandos útiles de Docker
+
+```bash
+# Ver si el contenedor está corriendo
+docker ps
+
+# Ver los logs del contenedor
+docker logs postgres_piscineds
+
+# Ver los logs en tiempo real
+docker logs -f postgres_piscineds
+
+# Ver solo las últimas 20 líneas de los logs
+docker logs --tail 20 postgres_piscineds
+
+# Parar el servicio
+docker-compose down
+
+# Parar el servicio y borrar TODOS los datos (💥 ¡cuidado! 💥)
+docker-compose down -v
+```
+
+---
+
+## 📝 Alternativas (si no quieres usar Docker)
+
+### Opción A: `setup.sh`
+Un script de bash que instale y configure PostgreSQL nativamente.
+
+### Opción B: `VM-instructions.txt`
+Un archivo de texto con las instrucciones exactas para instalar PostgreSQL dentro de una máquina virtual.
+
+---
+
+## ✅ Cómo saber que lo has hecho bien
+
+- El contenedor aparece en `docker ps`.
+- Puedes entrar a la base de datos con el comando `docker exec` (o con el `psql` oficial si lo tienes instalado).
+- El usuario, la contraseña y el nombre de la BD son exactamente los que pide el subject.
+- El archivo `docker-compose.yml` está limpio (sin la línea `version` obsoleta).
+
+---
 
 ## El comando psql -U «tu_login» -d piscineds -h localhost -W 
 
@@ -90,165 +350,6 @@ psql postgres://tu_login@localhost/piscineds
 ```
 ---
 
-## 📁 Archivos a entregar
-
-Dentro de la carpeta `ex00/` debes entregar **uno** de estos archivos:
-
-- `docker-compose.yml`  ← **recomendado**
-- o `setup.sh`
-- o `VM-instructions.txt`
-
----
-
-## 🧠 Explicación sencilla (para quien no sabe nada)
-
-Imagina que PostgreSQL es un **almacén grande y profesional**.  
-Docker es como una **caja mágica** que contiene ese almacén ya montado y listo para usar.  
-
-En vez de instalar PostgreSQL a mano (que puede ser complicado y diferente en cada ordenador), usamos Docker para que **todo el mundo tenga exactamente el mismo entorno**.
-
----
-
-## 🚀 Cómo implementarlo paso a paso (opción recomendada: Docker)
-
-### Paso 1: Crear el archivo `docker-compose.yml`
-
-Abre un editor de texto y crea el archivo `ex00/docker-compose.yml` con este contenido:
-
-```yaml
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:15
-    container_name: postgres_piscineds
-    environment:
-      POSTGRES_USER: «tu_login»          # ← ¡Cambia esto por tu login real!
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: piscineds
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-
-```
-
-**Importante:** sustituye `«tu_login»` por tu login real de 42. <br>
-⚠️ **Usa el código con precaución.**
-
-### Paso 2: Arrancar el servicio
-
-Abre una terminal en la carpeta `ex00/` y ejecuta:
-
-```bash
-docker-compose up -d
-```
-
-El comando docker-compose up -d sirve para **leer tu plano de configuración** (docker-compose.yml) y **encender la base de datos** en segundo plano sin bloquear tu terminal.<br>
-Imagínalo como el botón de **"Encendido General"** de tu fábrica virtual de bases de datos.<br>
-Aquí tienes el desglose exacto de qué hace y para qué sirve cada palabra:
-- **docker-compose**: Es el capataz de la obra. <br>
-Se encargará de leer el archivo de texto donde tenemos las instrucciones de tu base de datos y coordinar todo el trabajo pesado.
-- **up**: Es la orden de <i>"¡Construye y levanta todo!"</i>. <br>
-Le dice al capataz que descargue la imagen de PostgreSQL de internet (si no la tiene ya), cree el contenedor, configure las contraseñas, conecte el disco duro virtual (volume) y lo ponga en marcha.
-- **-d** (Detached / Modo Desacoplado): Significa <i>"Hazlo en segundo plano"</i>. <br>
-Si no pones esta -d, la terminal se quedará "secuestrada" mostrando un flujo infinito de textos y logs del sistema, y no podrás seguir escribiendo comandos. <br>Al poner -d, el contenedor se enciende de forma silenciosa "por detrás" y te devuelve el control de la terminal inmediatamente para que puedas seguir trabajando.
-
-(Verás que aparecen unas barras de descarga si es la primera vez, y luego un mensaje con un check verde que dice algo como Started o Running) ✅
-
-### Paso 3: Comprueba que está vivo: 
-Si quieres asegurarte de que tu contenedor está **encendido y funcionando** bien en segundo plano, escribe:
-``` bash
-docker ps
-```
-
-### Paso 4: Verificar que funciona
-
-Prueba la conexión:
-
-```bash
-psql -U tu_login -d piscineds -h localhost -W
-```
-
-Si te pide la contraseña y luego ves el prompt `piscineds=#`, **¡está perfecto! 🎉**
-
-Para salir de `psql` escribe `\q` y pulsa Enter.
-
-### Paso 5: Comandos útiles de Docker
-
-```bash
-# Ver si el contenedor está corriendo
-docker ps
-
-# Ver los logs
-docker-compose logs
-
-# Parar el servicio 
-docker-compose down
-
-# Parar y borrar los datos ¡cuidado! 🧨
-docker-compose down -v
-```
-
----
-
-## 📝 Alternativas (si no quieres usar Docker)
-
-### Opción A: `setup.sh`
-Un script de bash que instale y configure PostgreSQL nativamente.
-
-### Opción B: `VM-instructions.txt`
-Un archivo de texto con las instrucciones exactas para instalar PostgreSQL dentro de una máquina virtual.
-
----
-
-## ✅ Cómo saber que lo has hecho bien
-
-- Puedes ejecutar el comando `psql` y entrar a la base de datos.
-- El usuario, la contraseña y el nombre de la BD son exactamente los que se piden.
-- Si usas Docker, el archivo `docker-compose.yml` sigue las buenas prácticas del proyecto Inception.
-
----
-
-## 📋 ¿Cómo leer y entender los logs?
-
-```bash
-docker logs postgres_piscineds
-```
-- docker logs: Le dice al sistema:<br> 
-<i>"Quiero leer la caja negra o el diario de registro de lo que ha estado pasando aquí dentro"</i>.
-- postgres_piscineds:<br>
-Es el nombre exacto que le hemos dado al contenedor en la línea container_name en el «plano de Docker».
-
----
-
-## 💡 Los dos trucos más útiles para revisar errores
-
-Cuando algo falla, tirar el comando a secas puede mostrarte miles de líneas de texto antiguo. Para evitar marearte, podemos usar estas dos variantes:
-- Ver lo que pasa "en vivo" (**Modo Espía 🕵️‍♂️**)<br>
-¿Para qué sirve?<br> 
-Es perfecto si estás intentando **ejecutar tu comando psql en otra pestaña** y quieres **ver exactamente qué error salta** en el servidor al mismo tiempo.<br>
-¿Cómo salir?<br> 
-Para cerrar este modo y recuperar tu terminal, presiona las teclas **Ctrl + C**.<br>
-**Si quieres dejar la terminal abierta** y ver cómo se escribe el historial en tiempo real mientras intentas conectarte, **añade la flag -f** (Follow / Seguir):
-
-```bash
-docker logs -f postgres_piscineds
-```
-
-- Ver solo las **últimas líneas**<br>
-Si no quieres un testamento de texto y solo te interesa el error más reciente, **añade --tail seguido del número de líneas que quieras** inspeccionar.<br>
-El siguiente comando mostrará únicamente las **últimas 20 líneas** del historial, que es donde casi siempre se **esconde el motivo** por el cual falló la conexión:
-
-```bash
-docker logs --tail 20 postgres_piscineds
-```
-
----
 
 ## 🔗 Navegación
 
