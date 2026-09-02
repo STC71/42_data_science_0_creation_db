@@ -109,7 +109,7 @@ Este módulo se centra en la **creación y carga inicial** de la base de datos.
 - [Documentación oficial de PostgreSQL – Data Types](https://www.postgresql.org/docs/current/datatype.html)
 - [Documentación de COPY](https://www.postgresql.org/docs/current/sql-copy.html)
 - [Docker Compose – PostgreSQL](https://hub.docker.com/_/postgres)
-- Subject oficial de Inception (para buenas prácticas de Docker) No disponible en este repositorio.
+- Subject oficial de Inception (para buenas prácticas de Docker). No disponible en este repositorio.
 
 ---
 
