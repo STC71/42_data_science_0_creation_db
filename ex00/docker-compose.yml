@@ -27,15 +27,15 @@ services:
 
       # El nombre del administrador principal (el dueño de la base de datos, o sea: tu login). 
       # ¡RECUERDA reemplazar el login por tu usuario real de 42 (ej: jsmith)!
-      POSTGRES_USER: sternero
+      POSTGRES_USER: ${POSTGRES_USER}
       
       # La contraseña secreta que te pedirá el comando 'psql' cuando intentes conectarte.
       # La contraseña puede ser cualquier cosa, pero en este caso debemos a usar "mysecretpassword".
-      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_PASSWORD: ${POSTGRES_USER}
       
       # El nombre de la primera base de datos (el cajón de almacenamiento) que se creará automáticamente.
       # En este caso, la llamaremos "piscineds" para que coincida con el nombre del proyecto.
-      POSTGRES_DB: piscineds
+      POSTGRES_DB: ${POSTGRES_DB}
       
     # "ports" funciona como los canales de comunicación o "puertas de enlace".
     # Algo así como un portero que permite que los programas de tu Equipo real (como tu terminal con psql) 
@@ -57,7 +57,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       
     # Es la regla de supervivencia del contenedor. Le dice a tu Equipo que si el sistema
-    # de bases de datos se llega a apagar por un error físico o si reinicias la Equipo, 
+    # de bases de datos se llega a apagar por un error físico o si reinicias el equipo, 
     # vuelva a encender el contenedor de inmediato de forma automática, a menos que tú lo apagues aposta.
     restart: unless-stopped
 

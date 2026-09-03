@@ -18,7 +18,7 @@ Crear una base de datos **PostgreSQL** lista para usar, con los siguientes datos
 | **Nombre de la BD**| `piscineds`                |
 | **Contraseña**     | `mysecretpassword`         |
 
-Debemos poder conectarnos con este comando (según el subject):
+Debemos poder conectarnos con este comando (según el subject, pero no la más apropiada):
 
 ```bash
 psql -U «tu_login» -d piscineds -h localhost -W
@@ -32,13 +32,13 @@ Cuando pida la contraseña, escribes: `mysecretpassword`
 
 Dentro de la carpeta `ex00/` debes entregar **uno** de estos archivos:
 
-- `docker-compose.yml`  ← **recomendado**
+- `docker-compose.yml`    ← **recomendado**
 - o `setup.sh`
 - o `VM-instructions.txt`
 
 ---
 
-## 🧠 Explicación sencilla (para quien no sabe nada)
+## 🧠 Explicación sencilla
 
 Imagina que PostgreSQL es un **almacén grande y profesional**.  
 Docker es como una **caja mágica** que contiene ese almacén ya montado y listo para usar.  
@@ -54,27 +54,88 @@ En vez de instalar PostgreSQL a mano (que puede ser complicado y diferente en ca
 Abre un editor de texto y crea el archivo `ex00/docker-compose.yml` con este contenido:
 
 ```yaml
-services:
-  postgres:
-    image: postgres:15
-    container_name: postgres_piscineds
-    environment:
-      POSTGRES_USER: «tu_login»          # ← ¡Cambia esto por tu login real!
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: piscineds
+services:                                 # lista de todos los elementos o "servicios".
+  postgres:                               # "postgres" es el nombre que le damos a nuestro servicio.
+    image: postgres:15                    # descargamos la versión exacta número 15 del sistema
+                                          # de base de datos PostgreSQL.
+    container_name: postgres_piscineds    # alias o nombre propio que llevará este contenedor.
+    environment:                          # Ajustes del Entorno (credenciales)
+      POSTGRES_USER: ${POSTGRES_USER}     # ← ¡Cambia esto por tu login real!
+      POSTGRES_PASSWORD: ${POSTGRES_USER} # ← mysecretpassword
+      POSTGRES_DB: ${POSTGRES_DB}         # ← piscineds
     ports:
-      - "5432:5432"
+      - "5432:5432"                             # "PuertoDeTuEquipo : PuertoDentroDelContenedor".
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+      - postgres_data:/var/lib/postgresql/data  # enlaza una carpeta de tu máquina real llamada 
+                                                # 'postgres_data' con la carpeta interna del contenedor 
+                                                # donde se guardan los datos reales.
+    restart: unless-stopped               # regla de supervivencia del contenedor.
 
 volumes:
-  postgres_data:
+  postgres_data:                          # "Separa permanentemente un bloque de memoria con este nombre".
 ```
 
 **Importante:** sustituye `«tu_login»` por tu login real de 42 (ejemplo: `sternero`).
 
 > Se ha eliminado la línea `version: '3.8'` porque es obsoleta en las versiones modernas de Docker Compose.
+
+### 🔐 ¿Es necesario usar un archivo `.env`?
+
+No es obligatorio para superar este ejercicio, pero sí es **muy recomendable** para mantener las credenciales separadas de la configuración de Docker.
+
+#### ¿Qué dice realmente el subject?
+
+En este módulo (`ex00`) **no se exige explícitamente** el uso de un archivo `.env`. Sin embargo, el subject indica:
+
+> *If you choose to use Docker, your setup must follow the same standards and good practices as required in the Inception project.*
+
+Por eso conviene aplicar la misma buena práctica que en Inception: **evitar escribir las credenciales directamente en `docker-compose.yml`**.
+
+#### Recomendación práctica
+
+| Opción | ¿Es válida? | ¿Recomendada? | Comentario |
+|---|:---:|:---:|---|
+| Escribir las credenciales directamente en `docker-compose.yml` | ✅ | ⚠️ Aceptable | Cumple el subject, pero deja la contraseña visible en el archivo de configuración. |
+| Usar un archivo `.env` | ✅ | ⭐ Sí | Es más profesional y sigue las buenas prácticas de Inception. |
+
+Con `.env`, el `docker-compose.yml` queda sin credenciales expuestas:
+
+```yaml
+environment:
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
+```
+
+Crea **manualmente** un archivo `.env` en la misma carpeta:
+
+```dotenv
+POSTGRES_USER=tu_login
+POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_DB=piscineds
+```
+
+¡O MEJOR AÚN! ... puedes generar el archivo **automáticamente** usando el login de tu sistema, ejecuta
+este comando en la terminal desde la carpeta `ex00/`:
+
+```bash
+echo "POSTGRES_USER=$(id -un)
+POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_DB=piscineds" > .env
+```
+
+El comando crea o reemplaza `.env`, y `id -un` obtiene el usuario con el que has
+iniciado sesión. Puedes comprobar el resultado con:
+
+```bash
+cat .env
+```
+
+> ⚠️ Añade `.env` a `.gitignore` para evitar subir credenciales reales.
+
+```bash
+echo ".env" >> .gitignore
+```
 
 ### Paso 2: Arrancar el servicio
 
