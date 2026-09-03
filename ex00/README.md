@@ -83,9 +83,9 @@ volumes:
 
 No es obligatorio para superar este ejercicio, pero sí es **muy recomendable** para mantener las credenciales separadas de la configuración de Docker.
 
-#### ¿Qué dice realmente el subject?
+#### ¿Qué nos piden realmente?
 
-En este módulo (`ex00`) **no se exige explícitamente** el uso de un archivo `.env`. Sin embargo, el subject indica:
+En este módulo (`ex00`) **no se exige explícitamente** el uso de un archivo `.env`. Sin embargo, se nos indica que:
 
 > *If you choose to use Docker, your setup must follow the same standards and good practices as required in the Inception project.*
 
@@ -136,6 +136,15 @@ cat .env
 ```bash
 echo ".env" >> .gitignore
 ```
+
+### ✅ Conclusión
+
+| Objetivo | Decisión recomendada |
+|---|---|
+| 📋 **Solo cumplir** | No necesitas crear un archivo `.env`. Las credenciales pueden estar directamente en `docker-compose.yml`. |
+| 🧼 **Trabajo limpio y profesional** | **Sí, crea `.env`**. Mantendrás la configuración más ordenada y seguirás el espíritu de las buenas prácticas de Inception. |
+
+> ⭐ **Recomendación:** utiliza `.env` y mantenlo fuera de Git. No es obligatorio, pero es la opción más clara, segura y profesional.
 
 ### Paso 2: Arrancar el servicio
 
