@@ -31,7 +31,7 @@ services:
       
       # La contraseña secreta que te pedirá el comando 'psql' cuando intentes conectarte.
       # La contraseña puede ser cualquier cosa, pero en este caso debemos a usar "mysecretpassword".
-      POSTGRES_PASSWORD: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       
       # El nombre de la primera base de datos (el cajón de almacenamiento) que se creará automáticamente.
       # En este caso, la llamaremos "piscineds" para que coincida con el nombre del proyecto.
