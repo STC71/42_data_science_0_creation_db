@@ -1,5 +1,9 @@
 # 📦 Ejercicio 04 – Items table
 
+<p align="center">
+  <img src="../imgs/banner_04.jpg" alt="Piscine Data Science – Module 0 – ex04" width="100%">
+</p>
+
 [← Volver al README principal](../README.md)
 
 ---

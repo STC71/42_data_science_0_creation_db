@@ -1,5 +1,9 @@
 # 🤖 Ejercicio 03 – Automatic table
 
+<p align="center">
+  <img src="../imgs/banner_03.jpg" alt="Piscine Data Science – Module 0 – ex03" width="100%">
+</p>
+
 [← Volver al README principal](../README.md)
 
 ---
