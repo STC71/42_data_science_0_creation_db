@@ -22,15 +22,6 @@ EX00_START="$EX00_DIR/start.sh"
 ENV_FILE="$EX00_DIR/.env"
 CONTAINER_NAME="postgres_piscineds"
 
-# Configuración centralizada de pgAdmin. Se usa $HOME para que el script
-# sea portable entre usuarios y no dependa de rutas personales.
-PGADMIN_DIR="$HOME/sgoinfre/pgadmin4"
-PGADMIN_VENV="$PGADMIN_DIR/venv"
-PGADMIN_EXEC="$PGADMIN_VENV/bin/pgadmin4"
-PGADMIN_CONFIG_DIR="$PGADMIN_DIR/config"
-PGADMIN_CONFIG_FILE="$PGADMIN_CONFIG_DIR/config_local.py"
-PGADMIN_URL="http://127.0.0.1:5050"
-
 print_header()
 {
     clear
@@ -44,6 +35,7 @@ print_header()
     echo -e "${CYAN}${BOLD}║                                                            ║${RESET}"
     echo -e "${CYAN}${BOLD}║                  PostgreSQL + pgAdmin                      ║${RESET}"
     echo -e "${CYAN}${BOLD}║                                                            ║${RESET}"
+    echo -e "${CYAN}${BOLD}║                  sternero - 42 Málaga                      ║${RESET}"
     echo -e "${CYAN}${BOLD}║                                                            ║${RESET}"
     echo -e "${CYAN}${BOLD}╚════════════════════════════════════════════════════════════╝${RESET}"
     echo
@@ -244,10 +236,10 @@ check_pgadmin()
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
 
-    local pgadmin_dir="$PGADMIN_DIR"
-    local pgadmin_venv="$PGADMIN_VENV"
-    local pgadmin_config="$PGADMIN_CONFIG_FILE"
-    local pgadmin_url="$PGADMIN_URL"
+    local pgadmin_dir="$HOME/sgoinfre/pgadmin4"
+    local pgadmin_venv="$pgadmin_dir/venv"
+    local pgadmin_config="$pgadmin_dir/config/config_local.py"
+    local pgadmin_url="http://127.0.0.1:5050"
     local result=0
 
     echo -e "${CYAN}Vamos a comprobar la instalación local de pgAdmin.${RESET}"
@@ -333,11 +325,11 @@ check_pgadmin()
 }
 start_pgadmin()
 {
-    local pgadmin_dir="$PGADMIN_DIR"
-    local pgadmin_venv="$PGADMIN_VENV"
-    local pgadmin_exec="$PGADMIN_EXEC"
-    local pgadmin_config="$PGADMIN_CONFIG_DIR"
-    local pgadmin_url="$PGADMIN_URL"
+    local pgadmin_dir="$HOME/sgoinfre/pgadmin4"
+    local pgadmin_venv="$pgadmin_dir/venv"
+    local pgadmin_exec="$pgadmin_venv/bin/pgadmin4"
+    local pgadmin_config="$pgadmin_dir/config"
+    local pgadmin_url="http://127.0.0.1:5050"
     local http_code=""
     local i=0
 
@@ -346,27 +338,11 @@ start_pgadmin()
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
 
-    if ! command -v curl >/dev/null 2>&1; then
-        echo -e "${RED}✗ curl no está disponible; no podemos verificar pgAdmin.${RESET}"
-        return 1
-    fi
-
-    http_code="$(curl -s -o /dev/null -w "%{http_code}" "$pgadmin_url" 2>/dev/null)"
-
-    if [[ "$http_code" == "200" || "$http_code" == "302" ]]; then
-        echo -e "${GREEN}✓ pgAdmin ya está respondiendo correctamente.${RESET}"
+    if ps aux | grep "[p]gadmin4" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓ pgAdmin ya está ejecutándose.${RESET}"
         echo "  URL: $pgadmin_url"
-        echo "  Código HTTP: $http_code"
         echo
         return 0
-    fi
-
-    if ps aux | grep "[p]gadmin4" >/dev/null 2>&1; then
-        echo -e "${YELLOW}⚠ Existe un proceso pgAdmin, pero no responde por HTTP.${RESET}"
-        echo "  No se lanzará una segunda instancia."
-        echo -e "${CYAN}  Ejecuta la opción 3 para diagnosticar el estado.${RESET}"
-        echo
-        return 1
     fi
 
     if [[ ! -x "$pgadmin_exec" ]]; then
@@ -419,159 +395,6 @@ start_pgadmin()
     echo -e "${YELLOW}Puedes ejecutar la opción 3 para comprobar su estado.${RESET}"
     return 1
 }
-stop_pgadmin()
-{
-    local pgadmin_pid=""
-
-    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${BLUE}${BOLD}⏹ Detener pgAdmin${RESET}"
-    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo
-    echo -e "${CYAN}¿Qué va a ocurrir?${RESET}"
-    echo "  Se detendrá únicamente el proceso de pgAdmin de este usuario."
-    echo
-    echo -e "${CYAN}¿Qué NO ocurrirá?${RESET}"
-    echo "  No se eliminará la instalación ni su configuración."
-    echo "  No se tocará PostgreSQL."
-    echo
-    echo -e "${CYAN}→ Comando que se ejecutará:${RESET}"
-    echo "  kill <PID de pgAdmin>"
-    echo
-
-    pgadmin_pid="$(pgrep -u "$(id -u)" -f "$PGADMIN_EXEC" 2>/dev/null | head -n 1)"
-
-    if [[ -z "$pgadmin_pid" ]]; then
-        echo -e "${YELLOW}ℹ pgAdmin ya está detenido (no se encontró su proceso).${RESET}"
-        return 0
-    fi
-
-    echo "  PID detectado: $pgadmin_pid"
-    echo
-    read -r -p "¿Quieres detener pgAdmin? [S/n]: " answer
-    echo
-
-    if [[ -n "$answer" && ! "$answer" =~ ^[SsYy]$ ]]; then
-        echo -e "${YELLOW}ℹ Operación cancelada.${RESET}"
-        return 0
-    fi
-
-    if kill "$pgadmin_pid" 2>/dev/null; then
-        sleep 1
-    else
-        echo -e "${RED}✗ No se pudo enviar la señal de parada a pgAdmin.${RESET}"
-        return 1
-    fi
-
-    if kill -0 "$pgadmin_pid" 2>/dev/null; then
-        echo -e "${YELLOW}⚠ El proceso sigue activo; se enviará SIGTERM de nuevo.${RESET}"
-        kill -TERM "$pgadmin_pid" 2>/dev/null
-        sleep 1
-    fi
-
-    if kill -0 "$pgadmin_pid" 2>/dev/null; then
-        echo -e "${RED}✗ El proceso de pgAdmin no se ha detenido.${RESET}"
-        return 1
-    fi
-
-    echo -e "${GREEN}✓ pgAdmin se ha detenido correctamente.${RESET}"
-    return 0
-}
-
-stop_postgres()
-{
-    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "${BLUE}${BOLD}⏹ Detener PostgreSQL${RESET}"
-    echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo
-    echo -e "${CYAN}¿Qué va a ocurrir?${RESET}"
-    echo "  Se detendrá el contenedor $CONTAINER_NAME."
-    echo
-    echo -e "${CYAN}¿Qué NO ocurrirá?${RESET}"
-    echo "  No se eliminará el contenedor."
-    echo "  No se eliminará el volumen postgres_data."
-    echo "  No se eliminarán bases de datos, tablas ni datos."
-    echo
-    echo -e "${CYAN}→ Comando que se ejecutará:${RESET}"
-    echo "  docker stop $CONTAINER_NAME"
-    echo
-
-    if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
-        echo -e "${YELLOW}ℹ PostgreSQL ya está detenido o el contenedor no existe.${RESET}"
-        return 0
-    fi
-
-    read -r -p "¿Quieres detener PostgreSQL? [S/n]: " answer
-    echo
-
-    if [[ -n "$answer" && ! "$answer" =~ ^[SsYy]$ ]]; then
-        echo -e "${YELLOW}ℹ Operación cancelada.${RESET}"
-        return 0
-    fi
-
-    if docker stop "$CONTAINER_NAME"; then
-        echo -e "${GREEN}✓ PostgreSQL se ha detenido correctamente.${RESET}"
-        echo -e "${GREEN}✓ Los datos se conservan intactos.${RESET}"
-        return 0
-    fi
-
-    echo -e "${RED}✗ No se pudo detener PostgreSQL.${RESET}"
-    return 1
-}
-
-stop_services()
-{
-    local option=""
-
-    while true; do
-        echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-        echo -e "${BLUE}${BOLD}⏹ Detener servicios${RESET}"
-        echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-        echo
-        echo -e "${CYAN}Estas operaciones son NO DESTRUCTIVAS.${RESET}"
-        echo "No se eliminarán datos de PostgreSQL ni la instalación de pgAdmin."
-        echo
-        echo -e "  ${GREEN}[1]${RESET} Detener PostgreSQL"
-        echo "      Conserva contenedor, volumen y datos."
-        echo
-        echo -e "  ${GREEN}[2]${RESET} Detener pgAdmin"
-        echo "      Conserva instalación y configuración."
-        echo
-        echo -e "  ${GREEN}[3]${RESET} Detener PostgreSQL + pgAdmin"
-        echo "      Primero pgAdmin y después PostgreSQL."
-        echo
-        echo -e "  ${RED}[0]${RESET} Cancelar"
-        echo
-
-        read -r -p "Selecciona una opción [1/2/3/0]: " option
-        echo
-
-        case "$option" in
-            1)
-                stop_postgres
-                ;;
-            2)
-                stop_pgadmin
-                ;;
-            3)
-                stop_pgadmin
-                echo
-                stop_postgres
-                ;;
-            0)
-                echo -e "${YELLOW}ℹ Operación cancelada.${RESET}"
-                return 0
-                ;;
-            *)
-                echo -e "${RED}✗ Opción no válida.${RESET}"
-                ;;
-        esac
-
-        echo
-        read -r -p "Pulsa ENTER para volver al menú de servicios..."
-        echo
-    done
-}
-
 check_postgres_environment()
 {
     local result=0
@@ -639,7 +462,7 @@ main()
     while true; do
         show_menu
 
-        read -r -p "Selecciona una opción [1/2/3/4/5/q]: " OPTION
+        read -r -p "Selecciona una opción [1/2/3/4/q]: " OPTION
         echo
 
         case "$OPTION" in
@@ -670,12 +493,6 @@ main()
                 read -r -p "Pulsa ENTER para volver al menú de EX01..."
                 print_header
                 ;;
-
-            5)
-                stop_services
-                print_header
-                ;;
-
             q|Q)
                 echo -e "${CYAN}👋  ¡Hasta pronto!${RESET}"
                 exit 0

@@ -16,6 +16,9 @@ MAGENTA='\033[0;35m'
 NC='\033[0m'
 BOLD='\033[1m'
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR" || exit 1
+
 clear
 
 echo -e "${CYAN}"
@@ -48,6 +51,13 @@ ask_yes_no() {
     fi
 
     [[ "$answer" =~ ^[sS]$ ]]
+}
+
+env_is_valid() {
+    [ -f .env ] \
+        && grep -qxF "POSTGRES_USER=$(id -un)" .env \
+        && grep -qxF 'POSTGRES_PASSWORD=mysecretpassword' .env \
+        && grep -qxF 'POSTGRES_DB=piscineds' .env
 }
 
 # ------------------------------------------------------------
@@ -137,7 +147,35 @@ echo -e "Comando que se ejecutará:"
 echo -e "  ${BOLD}echo \"POSTGRES_USER=\$(id -un) ...\" > .env${NC}"
 echo ""
 
-if ask_yes_no "¿Crear el archivo .env ahora?" "s"; then
+if env_is_valid; then
+    echo -e "${GREEN}✅  Ya existe un .env válido para este ejercicio.${NC}"
+    echo -e "${CYAN}   Se conservará para evitar sobrescribir tus credenciales.${NC}"
+    echo ""
+    if ask_yes_no "¿Quieres regenerar el .env de todos modos?" "n"; then
+        CREATE_ENV=1
+    else
+        CREATE_ENV=0
+        echo -e "${YELLOW}⏭️  Se conserva el .env existente${NC}"
+    fi
+elif [ -f .env ]; then
+    echo -e "${RED}⚠️  Existe un .env, pero no contiene la configuración esperada.${NC}"
+    echo -e "   Regenerarlo sobrescribirá su contenido actual."
+    echo ""
+    if ask_yes_no "¿Sobrescribir el .env con la configuración de este ejercicio?" "n"; then
+        CREATE_ENV=1
+    else
+        CREATE_ENV=0
+        echo -e "${YELLOW}⏭️  Se conserva el .env no validado${NC}"
+    fi
+else
+    if ask_yes_no "¿Crear el archivo .env ahora?" "s"; then
+        CREATE_ENV=1
+    else
+        CREATE_ENV=0
+    fi
+fi
+
+if [ "$CREATE_ENV" -eq 1 ]; then
     echo -e "\n${BLUE}→ Creando archivo .env...${NC}"
     echo "POSTGRES_USER=$(id -un)
 POSTGRES_PASSWORD=mysecretpassword
@@ -163,31 +201,40 @@ sleep 1
 # ------------------------------------------------------------
 # PASO 1B: Proteger .env con .gitignore
 # ------------------------------------------------------------
-echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}🔒  PASO 1B: Proteger las credenciales con .gitignore${NC}"
-echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo -e "El archivo ${BOLD}.env${NC} contiene credenciales y no debe subirse a GitHub."
-echo -e "Se añadirá la entrada ${BOLD}.env${NC} a ${BOLD}.gitignore${NC}."
-echo -e "Si ${BOLD}.gitignore${NC} no existe, se creará en este directorio."
-echo ""
-echo -e "${RED}⚠️  Sin esta protección podrías publicar accidentalmente tu contraseña.${NC}"
-echo ""
-
-if ask_yes_no "¿Añadir .env a .gitignore ahora?" "s"; then
-    if [ ! -e .gitignore ]; then
-        printf '%s\n' ".env" > .gitignore
-        echo -e "${GREEN}✅  .gitignore creado con la entrada .env${NC}"
-    elif [ ! -f .gitignore ]; then
-        echo -e "${RED}❌  .gitignore existe, pero no es un archivo regular${NC}"
-    elif grep -qxF '.env' .gitignore; then
-        echo -e "${GREEN}✅  .env ya estaba protegido en .gitignore${NC}"
+if [ -f .env ]; then
+    if [ -f .gitignore ] && grep -qxF '.env' .gitignore; then
+        echo -e "${GREEN}✅  .env ya está protegido por .gitignore; se omite el paso 1B.${NC}"
+    elif [ -e .gitignore ] && [ ! -f .gitignore ]; then
+        echo -e "${RED}❌  .gitignore existe, pero no es un archivo regular; no se puede modificar.${NC}"
     else
-        printf '\n%s\n' ".env" >> .gitignore
-        echo -e "${GREEN}✅  Entrada .env añadida a .gitignore${NC}"
+        echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${BOLD}🔒  PASO 1B: Proteger las credenciales con .gitignore${NC}"
+        echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        echo -e "El archivo ${BOLD}.env${NC} contiene credenciales y no debe subirse a GitHub."
+        if [ -e .gitignore ]; then
+            echo -e "Se añadirá la entrada ${BOLD}.env${NC} al .gitignore existente."
+        else
+            echo -e "Se creará ${BOLD}.gitignore${NC} con la entrada ${BOLD}.env${NC}."
+        fi
+        echo ""
+        echo -e "${RED}⚠️  Sin esta protección podrías publicar accidentalmente tu contraseña.${NC}"
+        echo ""
+
+        if ask_yes_no "¿Proteger .env en .gitignore ahora?" "s"; then
+            if [ ! -e .gitignore ]; then
+                printf '%s\n' ".env" > .gitignore
+                echo -e "${GREEN}✅  .gitignore creado con la entrada .env${NC}"
+            else
+                printf '\n%s\n' ".env" >> .gitignore
+                echo -e "${GREEN}✅  Entrada .env añadida a .gitignore${NC}"
+            fi
+        else
+            echo -e "${RED}⚠️  No se ha modificado .gitignore: .env podría subirse a GitHub.${NC}"
+        fi
     fi
 else
-    echo -e "${RED}⚠️  No se ha modificado .gitignore: .env podría subirse a GitHub.${NC}"
+    echo -e "${YELLOW}⏭️  No existe .env; se omite el paso 1B.${NC}"
 fi
 
 echo ""
@@ -212,7 +259,10 @@ echo -e "  3. Extraerlo y copiarlo a ~/goinfre/bin"
 echo -e "  4. Añadirlo al PATH de forma permanente"
 echo ""
 
-if ask_yes_no "¿Instalar el cliente psql en el host ahora?" "s"; then
+if command -v psql &> /dev/null; then
+    echo -e "${GREEN}✅  El cliente psql ya está instalado; se omite el PASO 2.${NC}"
+    echo -e "   Versión detectada: $(psql --version)"
+elif ask_yes_no "¿Instalar el cliente psql en el host ahora?" "s"; then
     echo -e "\n${BLUE}→ Instalando psql...${NC}"
     echo ""
 
@@ -277,20 +327,54 @@ echo -e "Comando que se ejecutará:"
 echo -e "  ${BOLD}docker-compose up -d${NC}"
 echo ""
 
-if ask_yes_no "¿Arrancar el contenedor ahora?" "s"; then
-    echo -e "\n${BLUE}→ Ejecutando: docker-compose up -d${NC}"
-    echo ""
-    docker-compose up -d
-    echo ""
+CONTAINER_RUNNING=0
 
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅  Contenedor arrancado correctamente${NC}"
+if docker ps --format '{{.Names}}' | grep -qx 'postgres_piscineds'; then
+    echo -e "${GREEN}✅  PostgreSQL ya está arrancado en el contenedor postgres_piscineds.${NC}"
+    echo -e "${CYAN}   Se omite docker-compose up -d.${NC}"
+    CONTAINER_RUNNING=1
+elif docker inspect postgres_piscineds &> /dev/null; then
+    echo -e "${YELLOW}⚠️  El contenedor postgres_piscineds existe, pero está detenido.${NC}"
+    echo -e "   Se puede iniciar de nuevo conservando sus datos y configuración."
+    echo ""
+    if ask_yes_no "¿Iniciar el contenedor ahora?" "s"; then
+        echo -e "\n${BLUE}→ Ejecutando: docker-compose up -d${NC}"
+        echo ""
+        docker-compose up -d
+        DOCKER_COMPOSE_STATUS=$?
+        echo ""
+
+        if [ "$DOCKER_COMPOSE_STATUS" -eq 0 ]; then
+            echo -e "${GREEN}✅  Contenedor arrancado correctamente${NC}"
+            CONTAINER_RUNNING=1
+        else
+            echo -e "${RED}❌  Error al arrancar el contenedor${NC}"
+            exit 1
+        fi
     else
-        echo -e "${RED}❌  Error al arrancar el contenedor${NC}"
-        exit 1
+        echo -e "${YELLOW}⏭️  Se omite el arranque del contenedor${NC}"
     fi
 else
-    echo -e "${YELLOW}⏭️  Se omite el arranque del contenedor${NC}"
+    echo -e "${YELLOW}ℹ️  No existe todavía el contenedor postgres_piscineds.${NC}"
+    echo -e "   docker-compose up -d lo creará junto con la red y el volumen si son necesarios."
+    echo ""
+    if ask_yes_no "¿Crear y arrancar el contenedor ahora?" "s"; then
+        echo -e "\n${BLUE}→ Ejecutando: docker-compose up -d${NC}"
+        echo ""
+        docker-compose up -d
+        DOCKER_COMPOSE_STATUS=$?
+        echo ""
+
+        if [ "$DOCKER_COMPOSE_STATUS" -eq 0 ]; then
+            echo -e "${GREEN}✅  Contenedor creado y arrancado correctamente${NC}"
+            CONTAINER_RUNNING=1
+        else
+            echo -e "${RED}❌  Error al crear o arrancar el contenedor${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${YELLOW}⏭️  Se omite el arranque del contenedor${NC}"
+    fi
 fi
 
 echo ""
@@ -310,7 +394,9 @@ echo -e "Comando que se ejecutará:"
 echo -e "  ${BOLD}docker ps --filter \"name=postgres_piscineds\"${NC}"
 echo ""
 
-if ask_yes_no "¿Verificar el estado del contenedor ahora?" "s"; then
+if [ "$CONTAINER_RUNNING" -eq 1 ]; then
+    echo -e "${GREEN}✅  El estado ya se ha verificado en el paso 3; no se repite la comprobación.${NC}"
+elif ask_yes_no "¿Verificar el estado del contenedor ahora?" "s"; then
     echo -e "\n${BLUE}→ Ejecutando: docker ps --filter \"name=postgres_piscineds\"${NC}"
     echo ""
     docker ps --filter "name=postgres_piscineds" --format "table {{.ID}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}\t{{.Names}}"
@@ -320,7 +406,7 @@ if ask_yes_no "¿Verificar el estado del contenedor ahora?" "s"; then
         echo -e "${GREEN}✅  El contenedor postgres_piscineds está corriendo correctamente${NC}"
     else
         echo -e "${RED}❌  El contenedor no está corriendo${NC}"
-        exit 1
+        CONTAINER_RUNNING=0
     fi
 else
     echo -e "${YELLOW}⏭️  Se omite la verificación${NC}"
@@ -330,25 +416,85 @@ echo ""
 sleep 1
 
 # ------------------------------------------------------------
-# MENSAJE FINAL DE ÉXITO
+# RESUMEN REAL DEL ESTADO
 # ------------------------------------------------------------
-echo -e "${GREEN}"
-echo "╔═══════════════════════════════════════════════════════════════════════════════╗"
-echo "║                                                                               ║"
-echo "║               ✅  TODO LISTO Y FUNCIONANDO                                    ║"
-echo "║                                                                               ║"
-echo "║   Base de datos :  piscineds                                                  ║"
-echo "║   Usuario       :  $(id -un)                                                   ║"
-echo "║   Contraseña    :  mysecretpassword                                           ║"
-echo "║                                                                               ║"
-echo "║   Formas de conectarte:                                                       ║"
-echo "║                                                                               ║"
-echo "║   1. psql -U \$(whoami) -d piscineds -h localhost -W                           ║"
-echo "║                                                                               ║"
-echo "║   Usa la contraseña: mysecretpassword                                         ║"
-echo "║                                                                               ║"
-echo "╚═══════════════════════════════════════════════════════════════════════════════╝"
-echo -e "${NC}"
+ENV_EXISTS=0
+GITIGNORE_PROTECTED=0
+PSQL_AVAILABLE=0
+
+if [ -f .env ]; then
+    ENV_EXISTS=1
+    if [ -f .gitignore ] && grep -qxF '.env' .gitignore; then
+        GITIGNORE_PROTECTED=1
+    fi
+fi
+
+if command -v psql &> /dev/null; then
+    PSQL_AVAILABLE=1
+fi
+
+if docker ps --format '{{.Names}}' | grep -qx 'postgres_piscineds'; then
+    CONTAINER_RUNNING=1
+fi
+
+# ------------------------------------------------------------
+# RESUMEN FINAL
+# ------------------------------------------------------------
+if [ "$ENV_EXISTS" -eq 1 ] && [ "$GITIGNORE_PROTECTED" -eq 1 ] && [ "$CONTAINER_RUNNING" -eq 1 ]; then
+    echo -e "${GREEN}"
+    echo "╔═══════════════════════════════════════════════════════════════════════════════╗"
+    echo "║                                                                               ║"
+    echo "║               ✅  TODO LISTO Y FUNCIONANDO                                    ║"
+    echo "║                                                                               ║"
+    echo "║   Base de datos :  piscineds                                                  ║"
+    echo "║   Usuario       :  $(id -un)                                                   ║"
+    echo "║   Contraseña    :  mysecretpassword                                           ║"
+    echo "║                                                                               ║"
+    echo "║   Formas de conectarte:                                                       ║"
+    echo "║                                                                               ║"
+    if [ "$PSQL_AVAILABLE" -eq 1 ]; then
+        echo "║   1. psql -U \$(whoami) -d piscineds -h localhost -W                           ║"
+    else
+        echo "║   1. docker exec -it postgres_piscineds psql -U \$(whoami) -d piscineds -W     ║"
+    fi
+    echo "║                                                                               ║"
+    echo "║   Usa la contraseña: mysecretpassword                                         ║"
+    echo "║                                                                               ║"
+    echo "╚═══════════════════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+else
+    echo -e "${YELLOW}"
+    echo "╔═══════════════════════════════════════════════════════════════════════════════╗"
+    echo "║                         ⚠️  ENTORNO INCOMPLETO                                ║"
+    echo "╚═══════════════════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo -e "${YELLOW}Antes de conectarte, revisa lo siguiente:${NC}"
+    if [ "$ENV_EXISTS" -eq 0 ]; then
+        echo -e "  ${RED}❌ Falta .env: Docker Compose no tiene las credenciales de PostgreSQL.${NC}"
+        echo -e "     Solución: usa la opción 8 del menú para crearlo ahora."
+    else
+        echo -e "  ${GREEN}✅ .env existe${NC}"
+    fi
+    if [ "$GITIGNORE_PROTECTED" -eq 0 ] && [ "$ENV_EXISTS" -eq 1 ]; then
+        echo -e "  ${RED}⚠️  .env no está protegido por .gitignore.${NC}"
+        echo -e "     Solución: usa la opción 7 del menú para protegerlo."
+    elif [ "$ENV_EXISTS" -eq 1 ]; then
+        echo -e "  ${GREEN}✅ .env está protegido por .gitignore${NC}"
+    fi
+    if [ "$CONTAINER_RUNNING" -eq 0 ]; then
+        echo -e "  ${RED}❌ El contenedor postgres_piscineds no está corriendo.${NC}"
+        echo -e "     Solución: usa la opción 6 del menú para arrancarlo."
+    else
+        echo -e "  ${GREEN}✅ El contenedor está corriendo${NC}"
+    fi
+    if [ "$PSQL_AVAILABLE" -eq 0 ]; then
+        echo -e "  ${YELLOW}⚠️  psql no está instalado en el host.${NC}"
+        echo -e "     PostgreSQL sigue funcionando; la opción 5 usará psql dentro del contenedor."
+        echo -e "     Puedes instalar el cliente aceptando el PASO 2 al volver a ejecutar este script."
+    else
+        echo -e "  ${GREEN}✅ Cliente psql disponible${NC}"
+    fi
+fi
 
 # ------------------------------------------------------------
 # MENÚ INTERACTIVO FINAL
@@ -364,9 +510,12 @@ while true; do
     echo "  3) Ver solo las últimas 20 líneas de los logs"
     echo "  4) Parar el servicio y borrar TODOS los datos (¡cuidado!)"
     echo "  5) Conectar con la base de datos"
-    echo "  0) Salir del script"
+    echo "  6) Arrancar el contenedor si está detenido"
+    echo "  7) Añadir .env a .gitignore"
+    echo "  8) Crear el archivo .env si falta"
+    echo "  0) Salir de este script de ex00"
     echo ""
-    read -p "$(echo -e "${YELLOW}Elige una opción (0-5) → ${NC}")" OPTION
+    read -p "$(echo -e "${YELLOW}Elige una opción (0-8) → ${NC}")" OPTION
 
     case $OPTION in
         1)
@@ -406,15 +555,71 @@ while true; do
             fi
             ;;
         5)
-            echo -e "\n${BLUE}→ Conectando a la base de datos...${NC}"
-            echo ""
-            echo -e "Se usará el comando:"
-            echo -e "  ${BOLD}psql -U \$(whoami) -d piscineds -h localhost -W${NC}"
-            echo ""
-            echo -e "${BLUE}📌  Cuando pida la contraseña escribe: ${YELLOW}mysecretpassword${NC}"
-            echo -e "${BLUE}📌  Para salir de la base de datos escribe: ${YELLOW}\\q${BLUE}  y pulsa Enter${NC}"
-            echo ""
-            psql -U "$(whoami)" -d piscineds -h localhost -W
+            if [ "$CONTAINER_RUNNING" -eq 0 ]; then
+                echo -e "\n${RED}⚠️  No se puede conectar: el contenedor no está corriendo.${NC}"
+                echo -e "Usa primero la opción 6 para arrancarlo."
+            elif [ "$PSQL_AVAILABLE" -eq 0 ]; then
+                echo -e "\n${BLUE}→ Conectando con el psql incluido en el contenedor...${NC}"
+                echo -e "${BLUE}📌  Para salir de la base de datos escribe: ${YELLOW}\\q${BLUE}  y pulsa Enter${NC}"
+                echo ""
+                docker exec -it postgres_piscineds psql -U "$(id -un)" -d piscineds -W
+            else
+                echo -e "\n${BLUE}→ Conectando a la base de datos...${NC}"
+                echo ""
+                echo -e "Se usará el comando:"
+                echo -e "  ${BOLD}psql -U \$(whoami) -d piscineds -h localhost -W${NC}"
+                echo ""
+                echo -e "${BLUE}📌  Cuando pida la contraseña escribe: ${YELLOW}mysecretpassword${NC}"
+                echo -e "${BLUE}📌  Para salir de la base de datos escribe: ${YELLOW}\\q${BLUE}  y pulsa Enter${NC}"
+                echo ""
+                psql -U "$(whoami)" -d piscineds -h localhost -W
+            fi
+            ;;
+        6)
+            echo -e "\n${BLUE}→ Arrancando el contenedor...${NC}"
+            if [ "$ENV_EXISTS" -eq 0 ]; then
+                echo -e "${RED}❌  No se puede arrancar: falta .env. Usa primero la opción 8.${NC}"
+            elif docker-compose up -d; then
+                CONTAINER_RUNNING=1
+                echo -e "${GREEN}✅  Contenedor arrancado correctamente${NC}"
+            else
+                echo -e "${RED}❌  No se pudo arrancar el contenedor${NC}"
+            fi
+            ;;
+        7)
+            if [ ! -f .env ]; then
+                echo -e "\n${RED}⚠️  No existe .env; no hay credenciales que proteger.${NC}"
+            elif [ -f .gitignore ] && grep -qxF '.env' .gitignore; then
+                echo -e "\n${GREEN}✅  .env ya estaba protegido en .gitignore${NC}"
+                GITIGNORE_PROTECTED=1
+            elif [ -e .gitignore ] && [ ! -f .gitignore ]; then
+                echo -e "\n${RED}❌  .gitignore existe, pero no es un archivo regular${NC}"
+            else
+                printf '%s\n' ".env" >> .gitignore
+                GITIGNORE_PROTECTED=1
+                echo -e "\n${GREEN}✅  Entrada .env añadida a .gitignore${NC}"
+            fi
+            ;;
+        8)
+            if [ "$ENV_EXISTS" -eq 1 ]; then
+                echo -e "\n${GREEN}✅  El archivo .env ya existe${NC}"
+            else
+                echo -e "\n${YELLOW}⚠️  Se crearán credenciales locales para PostgreSQL.${NC}"
+                echo -e "El archivo contendrá la contraseña ${BOLD}mysecretpassword${NC}."
+                echo -e "Después, usa la opción 7 para protegerlo con .gitignore."
+                echo ""
+                if ask_yes_no "¿Crear .env ahora?" "n"; then
+                    printf 'POSTGRES_USER=%s\nPOSTGRES_PASSWORD=mysecretpassword\nPOSTGRES_DB=piscineds\n' "$(id -un)" > .env
+                    if [ -f .env ]; then
+                        ENV_EXISTS=1
+                        echo -e "${GREEN}✅  Archivo .env creado correctamente${NC}"
+                    else
+                        echo -e "${RED}❌  No se pudo crear .env${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}⏭️  Creación cancelada${NC}"
+                fi
+            fi
             ;;
         0)
             echo -e "\n${GREEN}👋  ¡Hasta luego!${NC}"
@@ -422,7 +627,7 @@ while true; do
             exit 0
             ;;
         *)
-            echo -e "${RED}❌  Opción no válida. Introduce un número del 0 al 5.${NC}"
+            echo -e "${RED}❌  Opción no válida. Introduce un número del 0 al 8.${NC}"
             ;;
     esac
 done
