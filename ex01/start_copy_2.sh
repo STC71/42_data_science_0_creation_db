@@ -30,7 +30,6 @@ PGADMIN_EXEC="$PGADMIN_VENV/bin/pgadmin4"
 PGADMIN_CONFIG_DIR="$PGADMIN_DIR/config"
 PGADMIN_CONFIG_FILE="$PGADMIN_CONFIG_DIR/config_local.py"
 PGADMIN_URL="http://127.0.0.1:5050"
-PGADMIN_PID_FILE="$PGADMIN_DIR/pgadmin.pid"
 
 print_header()
 {
@@ -220,7 +219,7 @@ check_postgres()
     return 1
 }
 
-check_postgres_port()
+check_postgres_config()
 {
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${BLUE}${BOLD}📡 5. Comprobación del puerto PostgreSQL${RESET}"
@@ -236,38 +235,6 @@ check_postgres_port()
     echo -e "${RED}✗ No se detecta el puerto host 5432 publicado.${RESET}"
     echo
     return 1
-}
-
-get_pgadmin_pids()
-{
-    local uid="$(id -u)"
-    local pid=""
-    local pids=""
-
-    # Prefer the PID file created by start_pgadmin.
-    if [[ -f "$PGADMIN_PID_FILE" ]]; then
-        pid="$(cat "$PGADMIN_PID_FILE" 2>/dev/null)"
-        if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
-            if ps -p "$pid" -o user=,args= 2>/dev/null | grep -q "^$(id -un).*${PGADMIN_DIR}"; then
-                pids="$pid"
-            fi
-        fi
-    fi
-
-    # Fallback: locate our pgAdmin executable for sessions started previously.
-    if [[ -z "$pids" ]]; then
-        pids="$(pgrep -u "$uid" -f "$PGADMIN_EXEC" 2>/dev/null | tr '\n' ' ')"
-    fi
-
-    # Return one PID per line, avoiding empty/duplicate entries.
-    for pid in $pids; do
-        [[ "$pid" =~ ^[0-9]+$ ]] && echo "$pid"
-    done | awk '!seen[$0]++'
-}
-
-check_pgadmin_process()
-{
-    [[ -n "$(get_pgadmin_pids)" ]]
 }
 
 check_pgadmin()
@@ -328,10 +295,10 @@ check_pgadmin()
 
     echo
     echo -e "${CYAN}→ Comando que se utilizará para comprobar el proceso:${RESET}"
-    echo "  get_pgadmin_pids"
+    echo "  ps aux | grep '[p]gadmin4'"
     echo
 
-    if check_pgadmin_process; then
+    if ps aux | grep '[p]gadmin4' >/dev/null 2>&1; then
         echo -e "${GREEN}✓ Se ha detectado un proceso de pgAdmin.${RESET}"
     else
         echo -e "${YELLOW}ℹ pgAdmin no está ejecutándose actualmente.${RESET}"
@@ -394,7 +361,7 @@ start_pgadmin()
         return 0
     fi
 
-    if check_pgadmin_process; then
+    if ps aux | grep "[p]gadmin4" >/dev/null 2>&1; then
         echo -e "${YELLOW}⚠ Existe un proceso pgAdmin, pero no responde por HTTP.${RESET}"
         echo "  No se lanzará una segunda instancia."
         echo -e "${CYAN}  Ejecuta la opción 3 para diagnosticar el estado.${RESET}"
@@ -432,8 +399,6 @@ start_pgadmin()
     echo -e "${CYAN}→ Arrancando pgAdmin...${RESET}"
 
     PYTHONPATH="$pgadmin_config:$PYTHONPATH" "$pgadmin_exec" >/dev/null 2>&1 &
-    local pgadmin_pid=$!
-    echo "$pgadmin_pid" > "$PGADMIN_PID_FILE"
 
     while [[ $i -lt 20 ]]; do
         sleep 1
@@ -456,34 +421,31 @@ start_pgadmin()
 }
 stop_pgadmin()
 {
-    local pids=""
-    local pid=""
-    local remaining=0
-    local wait_count=0
+    local pgadmin_pid=""
 
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${BLUE}${BOLD}⏹ Detener pgAdmin${RESET}"
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
     echo -e "${CYAN}¿Qué va a ocurrir?${RESET}"
-    echo "  Se detendrán únicamente los procesos de pgAdmin de este usuario."
+    echo "  Se detendrá únicamente el proceso de pgAdmin de este usuario."
     echo
     echo -e "${CYAN}¿Qué NO ocurrirá?${RESET}"
     echo "  No se eliminará la instalación ni su configuración."
     echo "  No se tocará PostgreSQL."
     echo
+    echo -e "${CYAN}→ Comando que se ejecutará:${RESET}"
+    echo "  kill <PID de pgAdmin>"
+    echo
 
-    pids="$(get_pgadmin_pids)"
-    if [[ -z "$pids" ]]; then
-        rm -f "$PGADMIN_PID_FILE" 2>/dev/null
-        echo -e "${YELLOW}ℹ pgAdmin ya está detenido.${RESET}"
+    pgadmin_pid="$(pgrep -u "$(id -u)" -f "$PGADMIN_EXEC" 2>/dev/null | head -n 1)"
+
+    if [[ -z "$pgadmin_pid" ]]; then
+        echo -e "${YELLOW}ℹ pgAdmin ya está detenido (no se encontró su proceso).${RESET}"
         return 0
     fi
 
-    echo -e "${CYAN}→ Procesos pgAdmin detectados:${RESET}"
-    for pid in $pids; do
-        ps -p "$pid" -o pid=,user=,args= 2>/dev/null || true
-    done
+    echo "  PID detectado: $pgadmin_pid"
     echo
     read -r -p "¿Quieres detener pgAdmin? [S/n]: " answer
     echo
@@ -493,47 +455,26 @@ stop_pgadmin()
         return 0
     fi
 
-    echo -e "${CYAN}→ Enviando SIGTERM a los procesos detectados...${RESET}"
-    for pid in $pids; do
-        kill -TERM "$pid" 2>/dev/null || true
-    done
-
-    while [[ $wait_count -lt 10 ]]; do
+    if kill "$pgadmin_pid" 2>/dev/null; then
         sleep 1
-        remaining=0
-        for pid in $pids; do
-            if kill -0 "$pid" 2>/dev/null; then
-                remaining=1
-                break
-            fi
-        done
-        [[ $remaining -eq 0 ]] && break
-        wait_count=$((wait_count + 1))
-    done
-
-    if [[ $remaining -ne 0 ]]; then
-        echo -e "${YELLOW}⚠ pgAdmin no terminó tras 10 segundos.${RESET}"
-        read -r -p "¿Quieres forzar la terminación con SIGKILL? [s/N]: " answer
-        echo
-        if [[ "$answer" =~ ^[SsYy]$ ]]; then
-            for pid in $pids; do
-                kill -KILL "$pid" 2>/dev/null || true
-            done
-            sleep 1
-        else
-            echo -e "${YELLOW}ℹ Se mantienen los procesos que no terminaron.${RESET}"
-            return 1
-        fi
+    else
+        echo -e "${RED}✗ No se pudo enviar la señal de parada a pgAdmin.${RESET}"
+        return 1
     fi
 
-    if [[ -z "$(get_pgadmin_pids)" ]]; then
-        rm -f "$PGADMIN_PID_FILE" 2>/dev/null
-        echo -e "${GREEN}✓ pgAdmin se ha detenido correctamente.${RESET}"
-        return 0
+    if kill -0 "$pgadmin_pid" 2>/dev/null; then
+        echo -e "${YELLOW}⚠ El proceso sigue activo; se enviará SIGTERM de nuevo.${RESET}"
+        kill -TERM "$pgadmin_pid" 2>/dev/null
+        sleep 1
     fi
 
-    echo -e "${RED}✗ Todavía quedan procesos de pgAdmin activos.${RESET}"
-    return 1
+    if kill -0 "$pgadmin_pid" 2>/dev/null; then
+        echo -e "${RED}✗ El proceso de pgAdmin no se ha detenido.${RESET}"
+        return 1
+    fi
+
+    echo -e "${GREEN}✓ pgAdmin se ha detenido correctamente.${RESET}"
+    return 0
 }
 
 stop_postgres()
@@ -648,7 +589,7 @@ check_postgres_environment()
         if docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
             check_postgres || result=1
             echo
-            check_postgres_port || result=1
+            check_postgres_config || result=1
         fi
     fi
 
@@ -682,9 +623,6 @@ show_menu()
     echo
     echo -e "  ${GREEN}[4]${RESET} ▶ Arrancar ${BOLD}pgAdmin${RESET}"
     echo -e "      Iniciar pgAdmin en segundo plano y comprobar el puerto 5050."
-    echo
-    echo -e "  ${GREEN}[5]${RESET} ▶ Detener ${BOLD}servicios${RESET}"
-    echo -e "      Detener PostgreSQL, pgAdmin o ambos sin borrar datos."
     echo
     echo -e "  ${RED}[q]${RESET} ✖ Salir"
     echo
