@@ -51,28 +51,69 @@ ask_yes_no() {
 }
 
 # ------------------------------------------------------------
-# RESET INICIAL
+# GESTIÓN INICIAL DEL CONTENEDOR
 # ------------------------------------------------------------
 echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}🔄  RESET INICIAL (opcional)${NC}"
+echo -e "${BOLD}🔄  GESTIÓN INICIAL DEL CONTENEDOR (opcional)${NC}"
 echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "Si el contenedor o los datos están en un estado inconsistente,"
-echo -e "es recomendable borrar todo y empezar de cero."
+echo -e "Puedes apagar el contenedor conservando los datos, o hacer una"
+echo -e "limpieza completa si el entorno está en un estado inconsistente."
 echo ""
-echo -e "Comando que se ejecutaría:"
-echo -e "  ${BOLD}docker-compose down -v${NC}"
+echo -e "  ${BOLD}1) Apagar el contenedor${NC}"
+echo -e "     Detiene el contenedor, pero conserva el contenedor, la red,"
+echo -e "     el volumen ${BOLD}postgres_data${NC} y todos los datos de la base de datos."
+echo ""
+echo -e "  ${BOLD}2) Limpieza completa${NC}"
+echo -e "     Detiene y elimina el contenedor, la red y el volumen."
+echo -e "     ${RED}⚠️  Borra permanentemente todas las bases de datos y tablas. 💥${NC}"
+echo ""
+echo "  0) No hacer nada y continuar"
 echo ""
 
-if ask_yes_no "¿Quieres hacer un reset limpio ahora?" "s"; then
-    echo -e "\n${BLUE}→ Ejecutando: docker-compose down -v${NC}"
-    echo ""
-    docker-compose down -v
-    echo ""
-    echo -e "${GREEN}✅  Entorno limpiado correctamente${NC}"
-else
-    echo -e "${YELLOW}⏭️  Se omite el reset. Continuamos...${NC}"
-fi
+read -p "$(echo -e "${YELLOW}Elige una opción (0-2) → ${NC}")" INITIAL_ACTION
+
+case "$INITIAL_ACTION" in
+    1)
+        echo ""
+        echo -e "${YELLOW}⚠️  Vas a apagar el contenedor activo.${NC}"
+        echo -e "El contenedor dejará de ejecutarse, pero ${BOLD}tus datos se conservarán${NC}"
+        echo -e "en el volumen postgres_data y podrás recuperarlos al volver a arrancar."
+        echo ""
+        if ask_yes_no "¿Confirmas apagar el contenedor?" "n"; then
+            echo -e "\n${BLUE}→ Ejecutando: docker-compose stop${NC}"
+            echo ""
+            docker-compose stop
+            echo ""
+            echo -e "${GREEN}✅  Contenedor apagado; contenedor y datos conservados${NC}"
+        else
+            echo -e "${YELLOW}⏭️  Operación cancelada. Continuamos...${NC}"
+        fi
+        ;;
+    2)
+        echo ""
+        echo -e "${RED}⚠️  PELIGRO: Vas a hacer una limpieza completa.${NC}"
+        echo -e "Se eliminarán el contenedor, la red y el volumen postgres_data."
+        echo -e "${BOLD}${RED}Todas las bases de datos, tablas y datos se perderán y no se podrán recuperar.${NC}"
+        echo ""
+        read -p "$(echo -e "${YELLOW}Escribe 'si' para confirmar la limpieza completa → ${NC}")" CLEAN_CONFIRM
+        if [[ "$CLEAN_CONFIRM" == "si" ]]; then
+            echo -e "\n${BLUE}→ Ejecutando: docker-compose down -v${NC}"
+            echo ""
+            docker-compose down -v
+            echo ""
+            echo -e "${GREEN}✅  Contenedor y datos eliminados${NC}"
+        else
+            echo -e "${YELLOW}⏭️  Limpieza cancelada. Continuamos...${NC}"
+        fi
+        ;;
+    0|"")
+        echo -e "${YELLOW}⏭️  No se realiza ninguna acción. Continuamos...${NC}"
+        ;;
+    *)
+        echo -e "${YELLOW}⚠️  Opción no válida. No se realiza ninguna acción. Continuamos...${NC}"
+        ;;
+esac
 
 echo ""
 sleep 1
@@ -114,6 +155,39 @@ POSTGRES_DB=piscineds" > .env
     fi
 else
     echo -e "${YELLOW}⏭️  Se omite la creación del .env${NC}"
+fi
+
+echo ""
+sleep 1
+
+# ------------------------------------------------------------
+# PASO 1B: Proteger .env con .gitignore
+# ------------------------------------------------------------
+echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}🔒  PASO 1B: Proteger las credenciales con .gitignore${NC}"
+echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "El archivo ${BOLD}.env${NC} contiene credenciales y no debe subirse a GitHub."
+echo -e "Se añadirá la entrada ${BOLD}.env${NC} a ${BOLD}.gitignore${NC}."
+echo -e "Si ${BOLD}.gitignore${NC} no existe, se creará en este directorio."
+echo ""
+echo -e "${RED}⚠️  Sin esta protección podrías publicar accidentalmente tu contraseña.${NC}"
+echo ""
+
+if ask_yes_no "¿Añadir .env a .gitignore ahora?" "s"; then
+    if [ ! -e .gitignore ]; then
+        printf '%s\n' ".env" > .gitignore
+        echo -e "${GREEN}✅  .gitignore creado con la entrada .env${NC}"
+    elif [ ! -f .gitignore ]; then
+        echo -e "${RED}❌  .gitignore existe, pero no es un archivo regular${NC}"
+    elif grep -qxF '.env' .gitignore; then
+        echo -e "${GREEN}✅  .env ya estaba protegido en .gitignore${NC}"
+    else
+        printf '\n%s\n' ".env" >> .gitignore
+        echo -e "${GREEN}✅  Entrada .env añadida a .gitignore${NC}"
+    fi
+else
+    echo -e "${RED}⚠️  No se ha modificado .gitignore: .env podría subirse a GitHub.${NC}"
 fi
 
 echo ""
@@ -338,7 +412,7 @@ while true; do
             echo -e "  ${BOLD}psql -U \$(whoami) -d piscineds -h localhost -W${NC}"
             echo ""
             echo -e "${BLUE}📌  Cuando pida la contraseña escribe: ${YELLOW}mysecretpassword${NC}"
-            echo -e "${BLUE}📌  Para salir de la base de datos escribe: ${YELLOW}\\q${NC}  y pulsa Enter"
+            echo -e "${BLUE}📌  Para salir de la base de datos escribe: ${YELLOW}\\q${BLUE}  y pulsa Enter${NC}"
             echo ""
             psql -U "$(whoami)" -d piscineds -h localhost -W
             ;;
