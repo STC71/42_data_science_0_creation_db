@@ -236,6 +236,10 @@ Para ver datos de una tabla (cuando exista):
 - Clic derecho sobre la tabla  
 - **View/Edit Data** → **All Rows**
 
+<p align="center">
+  <img src="./img_pgAdmin.png" alt="Piscine Data Science – Module 0 – ex01 – Imagen de pgAdmin" width="100%">
+</p>
+
 [↑ Volver al índice](#-índice)
 
 ---
