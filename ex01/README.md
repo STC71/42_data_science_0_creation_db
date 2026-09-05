@@ -264,6 +264,8 @@ Una vez dentro de pgAdmin:
    - Password: `mysecretpassword`
 4. Guarda.
 
+📖 **Guía de conexión paso a paso (detallada): [pgAdmin.md](./pgAdmin.md)**
+
 ### Explorar la base de datos
 
 - Expande el servidor → **Databases** → `piscineds` → **Schemas** → `public` → **Tables**
