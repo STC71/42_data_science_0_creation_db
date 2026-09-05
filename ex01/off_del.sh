@@ -27,10 +27,20 @@ PGADMIN_DIR="${PGADMIN_DIR:-$HOME/sgoinfre/pgadmin4}"
 PGADMIN_VENV="$PGADMIN_DIR/venv"
 PGADMIN_EXEC="$PGADMIN_VENV/bin/pgadmin4"
 PGADMIN_PID_FILE="$PGADMIN_DIR/pgadmin.pid"
-PSQL_BIN="$HOME/goinfre/bin/psql"
+PSQL_BIN="${PSQL_BIN:-$HOME/goinfre/bin/psql}"
 PSQL_ARCHIVE="/tmp/psql-x86-linux-static.tar.gz"
 PSQL_EXTRACTED="/tmp/psql"
 ZSHRC="$HOME/.zshrc"
+declare -a SHELL_CONFIG_FILES=(
+    "$HOME/.zshrc"
+    "$HOME/.zprofile"
+    "$HOME/.zshenv"
+    "$HOME/.bashrc"
+    "$HOME/.bash_profile"
+    "$HOME/.profile"
+)
+declare -a PSQL_CANDIDATES=()
+declare -a PGADMIN_CANDIDATES=()
 
 restore_origin()
 {
@@ -79,8 +89,126 @@ confirm_destructive()
     [[ "$answer" == "ELIMINAR" ]]
 }
 
+add_candidate()
+{
+    local value="$1" array_name="$2" candidate
+    declare -n candidates="$array_name"
+
+    [[ -e "$value" ]] || return 0
+    for candidate in "${candidates[@]}"; do
+        [[ "$candidate" == "$value" ]] && return 0
+    done
+    candidates+=("$value")
+}
+
+discover_installations()
+{
+    local path candidate root
+    PSQL_CANDIDATES=()
+    PGADMIN_CANDIDATES=()
+
+    add_candidate "$PSQL_BIN" PSQL_CANDIDATES
+    if path="$(command -v psql 2>/dev/null)" && [[ -x "$path" && "$path" == "$HOME/"* ]]; then
+        add_candidate "$(readlink -f "$path" 2>/dev/null || printf '%s' "$path")" PSQL_CANDIDATES
+    fi
+    while IFS= read -r path; do
+        add_candidate "$path" PSQL_CANDIDATES
+    done < <(find "$HOME" -type f -path '*/bin/psql' -perm -u+x -print 2>/dev/null)
+
+    add_candidate "$PGADMIN_DIR" PGADMIN_CANDIDATES
+    while IFS= read -r path; do
+        root="$(dirname "$(dirname "$(dirname "$path")")")"
+        add_candidate "$root" PGADMIN_CANDIDATES
+    done < <(find "$HOME" -type f -path '*/venv/bin/pgadmin4' -perm -u+x -print 2>/dev/null)
+}
+
+choose_candidate()
+{
+    local array_name="$1" label="$2" count candidate choice index=0
+    declare -n candidates="$array_name"
+    count="${#candidates[@]}"
+
+    [[ "$count" -gt 0 ]] || return 1
+    echo -e "${CYAN}Instalaciones de ${label} detectadas dentro de tu usuario:${RESET}"
+    for candidate in "${candidates[@]}"; do
+        index=$((index + 1))
+        echo "  [$index] $candidate"
+    done
+    echo "  [0] Cancelar"
+    read -r -p "$(echo -e "${YELLOW}Elige una ruta → ${RESET}")" choice
+    [[ "$choice" =~ ^[0-9]+$ && "$choice" -gt 0 && "$choice" -le "$count" ]] || return 1
+    SELECTED_CANDIDATE="${candidates[$((choice - 1))]}"
+}
+
+get_pgadmin_pids()
+{
+    local candidate
+    discover_installations
+    for candidate in "${PGADMIN_CANDIDATES[@]}"; do
+        pgrep -u "$(id -u)" -f "$candidate/venv/bin/pgadmin4" 2>/dev/null || true
+    done | sort -nu
+}
+
+cleanup_shell_references()
+{
+    local installation="$1" label="$2" file temp found=0
+    local -a matching_files=()
+
+    echo -e "${BLUE}${BOLD}🔎 Referencias de ${label} en configuraciones del shell${RESET}"
+    for file in "${SHELL_CONFIG_FILES[@]}"; do
+        if [[ -f "$file" ]] && grep -Fq -- "$installation" "$file"; then
+            matching_files+=("$file")
+            found=1
+            echo -e "${YELLOW}  $file${RESET}"
+            grep -Fn -- "$installation" "$file"
+        fi
+    done
+
+    if [[ "$label" == "psql" && "$installation" == "$PSQL_BIN" ]]; then
+        for file in "${SHELL_CONFIG_FILES[@]}"; do
+            if [[ -f "$file" ]] && grep -Fq 'export PATH="$HOME/goinfre/bin:$PATH"' "$file"; then
+                if [[ "$found" -eq 0 || ! " ${matching_files[*]} " =~ " $file " ]]; then
+                    matching_files+=("$file")
+                fi
+                found=1
+                echo -e "${YELLOW}  $file${RESET}"
+                grep -Fn 'export PATH="$HOME/goinfre/bin:$PATH"' "$file"
+            fi
+        done
+    fi
+
+    if [[ "$found" -eq 0 ]]; then
+        echo -e "${GREEN}✓ No se encontraron referencias de ${label} en los archivos del shell.${RESET}"
+        return 0
+    fi
+
+    echo
+    if ! confirm_destructive "Se eliminarán de las configuraciones del shell las líneas mostradas de ${label}."; then
+        echo -e "${YELLOW}Limpieza del shell cancelada; esas referencias se conservan.${RESET}"
+        return 0
+    fi
+
+    for file in "${matching_files[@]}"; do
+        temp="$(mktemp)" || {
+            echo -e "${RED}✗ No se pudo preparar la limpieza de $file.${RESET}"
+            return 1
+        }
+        awk -v installation="$installation" -v managed_psql="$PSQL_BIN" -v is_psql="$label" \
+            'index($0, installation) == 0 && !(is_psql == "psql" && installation == managed_psql && index($0, "export PATH=\"$HOME/goinfre/bin:$PATH\"") > 0)' \
+            "$file" > "$temp"
+        chmod --reference="$file" "$temp" 2>/dev/null || true
+        if ! mv -- "$temp" "$file"; then
+            rm -f -- "$temp"
+            echo -e "${RED}✗ No se pudo actualizar $file.${RESET}"
+            return 1
+        fi
+        echo -e "${GREEN}✓ Referencias eliminadas de $file.${RESET}"
+    done
+}
+
 show_status()
 {
+    discover_installations
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${BLUE}${BOLD}🔎 ESTADO DETECTADO (solo lectura)${RESET}"
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
@@ -94,16 +222,17 @@ show_status()
         echo -e "${YELLOW}ℹ PostgreSQL: contenedor no detectado${RESET}"
     fi
 
-    if pgrep -u "$(id -u)" -f "$PGADMIN_EXEC" >/dev/null 2>&1; then
+    if [[ -n "$(get_pgadmin_pids)" ]]; then
         echo -e "${GREEN}✓ pgAdmin: proceso activo${RESET}"
     else
         echo -e "${YELLOW}ℹ pgAdmin: proceso no detectado${RESET}"
     fi
 
-    if [[ -x "$PSQL_BIN" ]]; then
-        echo -e "${GREEN}✓ psql gestionado por este proyecto: $PSQL_BIN${RESET}"
+    if [[ "${#PSQL_CANDIDATES[@]}" -gt 0 ]]; then
+        echo -e "${GREEN}✓ Instalaciones de psql detectadas en tu usuario:${RESET}"
+        printf '    %s\n' "${PSQL_CANDIDATES[@]}"
     else
-        echo -e "${YELLOW}ℹ psql gestionado por este proyecto: no detectado${RESET}"
+        echo -e "${YELLOW}ℹ No se detectaron instalaciones de psql dentro de tu usuario${RESET}"
     fi
 
     if command -v psql >/dev/null 2>&1; then
@@ -112,8 +241,9 @@ show_status()
         echo -e "${YELLOW}ℹ psql no está visible en PATH${RESET}"
     fi
 
-    if [[ -d "$PGADMIN_DIR" ]]; then
-        echo -e "${GREEN}✓ Instalación pgAdmin detectada: $PGADMIN_DIR${RESET}"
+    if [[ "${#PGADMIN_CANDIDATES[@]}" -gt 0 ]]; then
+        echo -e "${GREEN}✓ Instalaciones de pgAdmin detectadas en tu usuario:${RESET}"
+        printf '    %s\n' "${PGADMIN_CANDIDATES[@]}"
     else
         echo -e "${YELLOW}ℹ Instalación pgAdmin no detectada${RESET}"
     fi
@@ -123,7 +253,7 @@ show_status()
 stop_pgadmin()
 {
     local pids pid answer remaining
-    pids="$(pgrep -u "$(id -u)" -f "$PGADMIN_EXEC" 2>/dev/null || true)"
+    pids="$(get_pgadmin_pids)"
 
     echo -e "${BLUE}${BOLD}⏹ DETENER pgAdmin${RESET}"
     echo "Se detendran solo procesos pgAdmin del usuario actual."
@@ -197,69 +327,82 @@ stop_postgres()
 
 remove_psql()
 {
-    local path_entry=0
-    echo -e "${RED}${BOLD}🗑 ELIMINAR INSTALACIÓN GESTIONADA DE psql${RESET}"
-    echo "Solo se considerarán archivos creados por este proyecto:"
-    echo "  Binario : $PSQL_BIN"
-    echo "  Archivo temporal: $PSQL_ARCHIVE"
-    echo "  Temporal extraído: $PSQL_EXTRACTED"
+    local selected
+    echo -e "${RED}${BOLD}🗑 ELIMINAR UNA INSTALACIÓN DE psql${RESET}"
+    discover_installations
     echo
 
-    if [[ -f "$ZSHRC" ]] && grep -qF 'export PATH="$HOME/goinfre/bin:$PATH"' "$ZSHRC"; then
-        path_entry=1
-        echo "  PATH detectado en: $ZSHRC"
-    fi
-
-    if [[ ! -e "$PSQL_BIN" && ! -e "$PSQL_ARCHIVE" && ! -e "$PSQL_EXTRACTED" && "$path_entry" -eq 0 ]]; then
-        echo -e "${YELLOW}ℹ No se detectó la instalación gestionada de psql.${RESET}"
+    if [[ "${#PSQL_CANDIDATES[@]}" -eq 0 ]]; then
+        echo -e "${YELLOW}ℹ No se detectó una instalación de psql dentro de tu usuario.${RESET}"
         return 0
     fi
 
-    if command -v psql >/dev/null 2>&1 && [[ "$(command -v psql)" != "$PSQL_BIN" ]]; then
-        echo -e "${YELLOW}⚠ psql también existe en otra ubicación: $(command -v psql)${RESET}"
-        echo "No se tocará esa instalación externa."
+    if ! choose_candidate PSQL_CANDIDATES "psql"; then
+        echo -e "${YELLOW}Operación cancelada.${RESET}"
+        return 0
+    fi
+    selected="$SELECTED_CANDIDATE"
+    if [[ "$selected" != "$HOME/"* || ! -f "$selected" || "$(basename "$selected")" != "psql" ]]; then
+        echo -e "${RED}✗ Ruta rechazada por seguridad: solo se pueden eliminar binarios psql dentro de HOME.${RESET}"
+        return 1
     fi
     echo
-    if ! confirm_destructive "Se eliminarán el psql gestionado, sus temporales y la entrada PATH gestionada."; then
+    echo -e "${YELLOW}Solo se eliminará esta ruta dentro de tu usuario:${RESET}"
+    echo "  $selected"
+    echo
+    if ! confirm_destructive "Se eliminará únicamente la instalación seleccionada de psql."; then
         echo -e "${YELLOW}Operación cancelada.${RESET}"
         return 0
     fi
 
-    rm -f "$PSQL_BIN" "$PSQL_ARCHIVE" "$PSQL_EXTRACTED"
-    if [[ "$path_entry" -eq 1 ]]; then
-        sed -i '\|^export PATH="\$HOME/goinfre/bin:\$PATH"$|d' "$ZSHRC"
+    rm -f -- "$selected"
+    if [[ "$selected" == "$PSQL_BIN" ]]; then
+        rm -f -- "$PSQL_ARCHIVE" "$PSQL_EXTRACTED"
+        echo -e "${GREEN}✓ Temporales conocidos de la instalación también eliminados.${RESET}"
     fi
     echo -e "${GREEN}✓ Instalación gestionada de psql eliminada.${RESET}"
+    cleanup_shell_references "$selected" "psql"
     echo -e "${YELLOW}ℹ Las sesiones de terminal ya abiertas pueden conservar su PATH hasta reiniciarse.${RESET}"
 }
 
 remove_pgadmin()
 {
-    local pids
-    echo -e "${RED}${BOLD}🗑 ELIMINAR INSTALACIÓN LOCAL DE pgAdmin${RESET}"
-    echo "Ruta detectada: $PGADMIN_DIR"
+    local pids selected
+    echo -e "${RED}${BOLD}🗑 ELIMINAR UNA INSTALACIÓN LOCAL DE pgAdmin${RESET}"
+    discover_installations
     echo
-    pids="$(pgrep -u "$(id -u)" -f "$PGADMIN_EXEC" 2>/dev/null || true)"
-    if [[ -n "$pids" ]]; then
-        echo -e "${RED}⚠ pgAdmin sigue ejecutándose.${RESET}"
-        echo "Deténlo primero para evitar borrar una instalación en uso."
+    if [[ "${#PGADMIN_CANDIDATES[@]}" -eq 0 ]]; then
+        echo -e "${YELLOW}ℹ No se detectó una instalación de pgAdmin dentro de tu usuario.${RESET}"
+        return 0
+    fi
+    if ! choose_candidate PGADMIN_CANDIDATES "pgAdmin"; then
+        echo -e "${YELLOW}Operación cancelada.${RESET}"
+        return 0
+    fi
+    selected="$SELECTED_CANDIDATE"
+    if [[ "$selected" == "$HOME" || "$selected" == "/" || "$selected" != "$HOME/"* || ! -x "$selected/venv/bin/pgadmin4" ]]; then
+        echo -e "${RED}✗ Ruta rechazada por seguridad: no coincide con una instalación pgAdmin válida dentro de HOME.${RESET}"
         return 1
     fi
-    if [[ ! -e "$PGADMIN_DIR" ]]; then
-        echo -e "${YELLOW}ℹ No se detectó la instalación de pgAdmin.${RESET}"
-        return 0
+    pids="$(pgrep -u "$(id -u)" -f "$selected/venv/bin/pgadmin4" 2>/dev/null || true)"
+    if [[ -n "$pids" ]]; then
+        echo -e "${RED}⚠ pgAdmin sigue ejecutándose.${RESET}"
+        echo "Detén esta instalación primero para evitar borrar una instalación en uso."
+        return 1
     fi
 
     echo -e "${RED}Se eliminarán el entorno virtual, configuración, logs, sesiones y la base SQLite local de pgAdmin.${RESET}"
+    echo "Ruta seleccionada: $selected"
     echo -e "${RED}Esto no elimina PostgreSQL ni el volumen postgres_data.${RESET}"
     echo
-    if ! confirm_destructive "Se eliminará completamente $PGADMIN_DIR."; then
+    if ! confirm_destructive "Se eliminará completamente $selected."; then
         echo -e "${YELLOW}Operación cancelada.${RESET}"
         return 0
     fi
 
-    rm -rf -- "$PGADMIN_DIR"
+    rm -rf -- "$selected"
     echo -e "${GREEN}✓ Instalación local de pgAdmin eliminada.${RESET}"
+    cleanup_shell_references "$selected" "pgAdmin"
 }
 
 main_menu()
