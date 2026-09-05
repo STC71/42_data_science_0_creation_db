@@ -4,7 +4,8 @@
   <img src="../imgs/banner_01.jpg" alt="Piscine Data Science – Module 0 – ex01 – pgAdmin" width="100%">
 </p>
 
-[← Volver al README de EX01](README.md) · [← README principal](../README.md)
+[← Volver al README de EX01](README.md) <br>
+[← Volver al README principal](../README.md)
 
 ---
 
