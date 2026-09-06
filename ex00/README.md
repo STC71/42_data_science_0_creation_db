@@ -8,6 +8,23 @@
 
 ---
 
+## 📑 Índice
+
+1. [¿Qué se pide exactamente?](#-qué-se-pide-exactamente)
+2. [Archivos a entregar](#-archivos-a-entregar)
+3. [Explicación sencilla](#-explicación-sencilla)
+4. [Scripts de este ejercicio](#-scripts-de-este-ejercicio)
+5. [Cómo implementarlo paso a paso (Docker)](#-cómo-implementarlo-paso-a-paso-opción-recomendada-docker)
+6. [Archivo `.env` y buenas prácticas](#-es-necesario-usar-un-archivo-env)
+7. [Cómo conectarse a la base de datos](#-cómo-conectarse-a-la-base-de-datos)
+8. [Alias recomendado](#alias-recomendado-muy-útil)
+9. [Comandos útiles de Docker](#comandos-útiles-de-docker)
+10. [Alternativas sin Docker](#-alternativas-si-no-quieres-usar-docker)
+11. [Cómo saber que lo has hecho bien](#-cómo-saber-que-lo-has-hecho-bien)
+12. [Navegación](#-navegación)
+
+---
+
 ## 🎯 ¿Qué se pide exactamente?
 
 Crear una base de datos **PostgreSQL** lista para usar, con los siguientes datos obligatorios:
@@ -26,6 +43,8 @@ psql -U «tu_login» -d piscineds -h localhost -W
 
 Cuando pida la contraseña, escribes: `mysecretpassword`
 
+[↑ Volver al índice](#-índice)
+
 ---
 
 ## 📁 Archivos a entregar
@@ -36,6 +55,15 @@ Dentro de la carpeta `ex00/` debes entregar **uno** de estos archivos:
 - o `setup.sh`
 - o `VM-instructions.txt`
 
+En este repositorio también encontrarás un script de ayuda (opcional, pero muy útil en el campus 42):
+
+| Archivo | Función |
+|---------|---------|
+| [`docker-compose.yml`](docker-compose.yml) | Define el servicio PostgreSQL 15 |
+| [`start.sh`](start.sh) | Automatiza `.env`, arranque, comprobaciones y menú de conexión |
+
+[↑ Volver al índice](#-índice)
+
 ---
 
 ## 🧠 Explicación sencilla
@@ -45,48 +73,138 @@ Docker es como una **caja mágica** que contiene ese almacén ya montado y listo
 
 En vez de instalar PostgreSQL a mano (que puede ser complicado y diferente en cada ordenador), usamos Docker para que **todo el mundo tenga exactamente el mismo entorno**.
 
+[↑ Volver al índice](#-índice)
+
+---
+
+## 🧰 Scripts de este ejercicio
+
+### `start.sh` — Asistente interactivo de EX00
+
+Script pensado para el campus 42. Te guía paso a paso y evita errores típicos.
+
+**Qué puede hacer:**
+
+| Fase | Acción |
+|------|--------|
+| Gestión inicial | Apagar el contenedor (conservando datos) o limpieza completa (`down -v`) |
+| Paso 1 | Crear / validar el archivo `.env` |
+| Paso 1B | Proteger `.env` con `.gitignore` |
+| Paso 2 | Instalar el cliente `psql` en el host **sin sudo** (opcional) |
+| Paso 3 | Arrancar PostgreSQL con `docker-compose up -d` |
+| Paso 4 | Verificar que el contenedor está corriendo |
+| Menú final | Logs, conexión a la BD, arrancar/parar, recrear `.env`, etc. |
+
+**Qué NO hace:**
+
+- No usa `sudo`
+- No borra datos sin confirmación explícita (`si` / opciones claras)
+- No modifica EX01 ni pgAdmin
+- No hardcodea tu login: usa `$(id -un)` / `$(whoami)`
+
+**Cómo usarlo:**
+
+```bash
+cd ruta/a/ex00
+chmod +x start.sh
+./start.sh
+```
+
+🔗 También puedes llamar a **start.sh** desde el script con el mismo nombre presente en **ex01** que además arranca pgAdmin, lo que auna ambos procesos en uno solo. 🔗
+
+**Menú final típico:**
+
+```text
+1) Confirmar que el contenedor está corriendo
+2) Ver los logs completos del contenedor
+3) Ver solo las últimas 20 líneas de los logs
+4) Parar el servicio y borrar TODOS los datos (¡cuidado!)
+5) Conectar con la base de datos
+6) Arrancar el contenedor si está detenido
+7) Añadir .env a .gitignore
+8) Crear el archivo .env si falta
+0) Salir
+```
+
+**Equivalentes manuales (sin el script):**
+
+```bash
+# Crear .env
+echo "POSTGRES_USER=$(id -un)
+POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_DB=piscineds" > .env
+
+# Proteger .env
+echo ".env" >> .gitignore
+
+# Arrancar
+docker-compose up -d
+
+# Comprobar
+docker ps
+
+# Conectar (dentro del contenedor)
+docker exec -it postgres_piscineds psql -U "$(whoami)" -d piscineds -W
+
+# Conectar (si tienes psql en el host)
+psql -U "$(whoami)" -d piscineds -h localhost -W
+```
+
+[↑ Volver al índice](#-índice)
+
 ---
 
 ## 🚀 Cómo implementarlo paso a paso (opción recomendada: Docker)
 
-### Paso 1: Crear el archivo `docker-compose.yml`
+### Opción rápida (recomendada)
+
+```bash
+./start.sh
+```
+
+Sigue las preguntas en pantalla. Al final deberías poder conectar a `piscineds`.
+
+### Opción manual
+
+#### Paso 1: Crear el archivo `docker-compose.yml`
 
 Abre un editor de texto y crea el archivo `ex00/docker-compose.yml` con este contenido:
 
 ```yaml
-services:                                 # lista de todos los elementos o "servicios".
-  postgres:                                 # "postgres" es el nombre que le damos a nuestro servicio.
-    image: postgres:15                        # descargamos la versión exacta número 15 del sistema
-                                              # de base de datos PostgreSQL.
-    container_name: postgres_piscineds        # alias o nombre propio que llevará este contenedor.
-    environment:                              # Variables de entorno (credenciales)
-      POSTGRES_USER: ${POSTGRES_USER}           # ← ¡Cambia esto por tu login real!
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # ← mysecretpassword
-      POSTGRES_DB: ${POSTGRES_DB}               # ← piscineds
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_piscineds
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"                             # "PuertoDeTuEquipo : PuertoDentroDelContenedor".
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data  # enlaza una carpeta de tu máquina real llamada 
-                                                # 'postgres_data' con la carpeta interna del contenedor 
-                                                # donde se guardan los datos reales.
-    restart: unless-stopped                     # regla de supervivencia del contenedor.
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
 volumes:
-  postgres_data:                          # "Separa permanentemente un bloque de memoria con este nombre".
+  postgres_data:
 ```
 
 > Se ha eliminado la línea `version: '3.8'` porque es obsoleta en las versiones modernas de Docker Compose.
 
+El archivo del repositorio incluye comentarios didácticos línea a línea; la versión mínima válida es la de arriba.
+
+[↑ Volver al índice](#-índice)
+
 ---
 
-### 🔐 ¿Es necesario usar un archivo `.env`?
+## 🔐 ¿Es necesario usar un archivo `.env`?
 
 No es obligatorio, pero **sí es muy recomendable**.
 
 El subject indica que si usas Docker debes seguir las buenas prácticas del proyecto **Inception**.  
 Una de esas buenas prácticas es **no hardcodear las credenciales** en el `docker-compose.yml`.
 
-#### Cómo crear el archivo `.env` automáticamente
+### Cómo crear el archivo `.env` automáticamente
 
 Desde la carpeta `ex00/` ejecuta:
 
@@ -102,27 +220,15 @@ Comprueba el contenido:
 cat .env
 ```
 
-Si fuese necesario: añade el archivo a `.gitignore` para no subirlo a ningún repositorio:
+Añade el archivo a `.gitignore` para no subirlo al repositorio:
 
 ```bash
 echo ".env" >> .gitignore
 ```
 
----
+Con `start.sh`, estos pasos se ofrecen de forma interactiva (pasos 1 y 1B, y opciones 7 y 8 del menú).
 
-### Paso 2: Arrancar el servicio
-
-```bash
-docker-compose up -d
-```
-
-### Paso 3: Comprobar que el contenedor está vivo
-
-```bash
-docker ps
-```
-
-Debes ver el contenedor `postgres_piscineds` en estado **Up**.
+[↑ Volver al índice](#-índice)
 
 ---
 
@@ -136,8 +242,6 @@ psql -U $(whoami) -d piscineds -h localhost -W
 
 > `$(whoami)` obtiene automáticamente el usuario del sistema.
 
-Adelanta al punto 3 (opciones avanzadas) para más información
-
 ---
 
 ### 2. Forma recomendada y más sencilla (usando Docker)
@@ -149,30 +253,28 @@ La imagen oficial `postgres:15` **ya trae el comando `psql` instalado**, por eso
 docker exec -it postgres_piscineds psql -U $(whoami) -d piscineds -W
 ```
 
----
-
 #### ¿Qué significa cada parte?
 
-| Parte                              | Significado |
-|------------------------------------|-----------|
-| `docker exec`                      | Ejecuta un comando **dentro** de un contenedor que ya está corriendo |
-| `-it`                              | Modo interactivo + terminal |
-| `postgres_piscineds`               | Nombre del contenedor |
-| `psql -U $(whoami) -d piscineds`   | Entra a PostgreSQL con tu usuario y la base de datos |
-| `-W`                               | Fuerza a que pida la contraseña |
+| Parte | Significado |
+|-------|-------------|
+| `docker exec` | Ejecuta un comando **dentro** de un contenedor que ya está corriendo |
+| `-it` | Modo interactivo + terminal |
+| `postgres_piscineds` | Nombre del contenedor |
+| `psql -U $(whoami) -d piscineds` | Entra a PostgreSQL con tu usuario y la base de datos |
+| `-W` | Fuerza a que pida la contraseña |
 
 #### ¿Por qué a veces no pide la contraseña?
 
-Cuando usas `docker exec`, el comando se ejecuta **dentro del contenedor**.  
-Dentro del contenedor PostgreSQL está configurado con autenticación `trust` para conexiones locales, por eso no siempre pide contraseña.  
-
-Esto es normal. La contraseña `mysecretpassword` sigue existiendo y se usa cuando te conectas desde fuera del contenedor.
+- Cuando usas `docker exec`, el comando se ejecuta **dentro del contenedor**.  
+- Dentro del contenedor PostgreSQL está configurado con autenticación `trust` para conexiones locales, por eso no siempre pide contraseña.
+- Esto es normal. La contraseña `mysecretpassword` sigue existiendo y se usa cuando te conectas desde fuera del contenedor (comando oficial del subject o pgAdmin).
+- Desde `start.sh`, la **opción 5** elige automáticamente host o contenedor según tengas `psql` instalado.
 
 ---
 
-### 3. Opción avanzada: Instalar `psql` en el host sin `sudo` (opcional)
+### 3. Opción avanzada: instalar `psql` en el host sin `sudo` (opcional)
 
-Si quieres tener el comando `psql` disponible fuera del contenedor:
+Si quieres el comando oficial del subject fuera del contenedor:
 
 ```bash
 CURRENT_DIR=$(pwd)
@@ -188,26 +290,34 @@ source ~/.zshrc
 cd "$CURRENT_DIR"
 ```
 
-Después de esto ya podrás usar el comando oficial del subject desde cualquier lugar.
+Después podrás usar:
+
+```bash
+psql -U $(whoami) -d piscineds -h localhost -W
+```
+
+`start.sh` ofrece este mismo proceso en el **PASO 2** (solo si aún no tienes `psql`).
+
+[↑ Volver al índice](#-índice)
 
 ---
 
 ## Alias recomendado (muy útil)
 
-Un **alias** es un atajo para no tener que escribir un comando largo cada vez.
-
-Crea el alias con este comando:
+Un **alias** es un atajo para no escribir el comando largo cada vez.
 
 ```bash
 echo 'alias pspiscine="docker exec -it postgres_piscineds psql -U \$(whoami) -d piscineds -W"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-A partir de ahora solo tienes que escribir:
+A partir de ahora:
 
 ```bash
 pspiscine
 ```
+
+[↑ Volver al índice](#-índice)
 
 ---
 
@@ -231,10 +341,19 @@ docker logs --tail 20 postgres_piscineds
 
 # Parar el servicio (los datos se conservan)
 docker-compose down
+# o solo detener:
+docker-compose stop
 
 # Parar el servicio y borrar TODOS los datos (¡cuidado!)
 docker-compose down -v
 ```
+
+En `start.sh`:
+
+- Apagar conservando datos → gestión inicial opción **1** (`docker-compose stop`)
+- Limpieza completa → gestión inicial opción **2** o menú opción **4** (`down -v`, con confirmación)
+
+[↑ Volver al índice](#-índice)
 
 ---
 
@@ -242,6 +361,8 @@ docker-compose down -v
 
 - **`setup.sh`**: script que instala y configura PostgreSQL nativamente.
 - **`VM-instructions.txt`**: instrucciones para instalar PostgreSQL dentro de una máquina virtual.
+
+[↑ Volver al índice](#-índice)
 
 ---
 
@@ -251,6 +372,19 @@ docker-compose down -v
 - Puedes entrar a la base de datos con `docker exec` o con el comando oficial del subject.
 - El usuario, la contraseña y el nombre de la BD son exactamente los que pide el subject.
 - El archivo `docker-compose.yml` está limpio (sin la línea `version` obsoleta).
+- (Recomendado) Existe `.env` y está en `.gitignore`.
+
+Comprobación rápida:
+
+```bash
+docker ps --filter "name=postgres_piscineds"
+docker exec -it postgres_piscineds psql -U "$(whoami)" -d piscineds -W
+# dentro de psql:
+# \conninfo
+# \q
+```
+
+[↑ Volver al índice](#-índice)
 
 ---
 
