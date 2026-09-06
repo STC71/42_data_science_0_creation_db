@@ -132,7 +132,10 @@ Cuando veas la pantalla de login de pgAdmin, continúa.
    (los del primer arranque, **no** los de PostgreSQL).
 4. Pulsa **Login**.
 
-Si entras y ves un panel con un árbol a la izquierda (donde pone **Servers**), vas bien.
+<p align="center">
+  <img src="./imgs/img_pgAdmin_01.png" alt="Piscine Data Science – Module 0 – ex01 – Imagen de pgAdmin" width="100%">
+Si entras y ves un panel con un árbol a la izquierda (donde pone Servers), vas bien.
+</p>
 
 [↑ Volver al índice](#-índice)
 
@@ -147,7 +150,10 @@ En el panel izquierdo:
 3. En el menú: **Register**.
 4. Luego: **Server…**.
 
-Se abrirá una ventana con pestañas: **General**, **Connection**, etc.
+<p align="center">
+  <img src="./imgs/img_pgAdmin_02.png" alt="Piscine Data Science – Module 0 – ex01 – Imagen de pgAdmin" width="100%">
+Se abrirá una ventana con pestañas: General, Connection, etc.
+</p>
 
 [↑ Volver al índice](#-índice)
 
@@ -162,7 +168,11 @@ Se abrirá una ventana con pestañas: **General**, **Connection**, etc.
 Piscine DS
 ```
 
-Ese nombre es solo una etiqueta para ti. No afecta a la conexión real.
+<p align="center">
+  <img src="./imgs/img_pgAdmin_03.png" alt="Piscine Data Science – Module 0 – ex01 – Imagen de pgAdmin" width="100%">
+</p>
+
+Ese nombre: **Piscine DS**, es solo una etiqueta para ti. **No afecta a la conexión real**.
 
 No hace falta rellenar más campos en esta pestaña.
 
@@ -207,6 +217,10 @@ Para recordar tus valores de EX00:
 cat ../ex00/.env
 ```
 
+<p align="center">
+  <img src="./imgs/img_pgAdmin_04.png" alt="Piscine Data Science – Module 0 – ex01 – Imagen de pgAdmin" width="100%">
+</p>
+
 [↑ Volver al índice](#-índice)
 
 ---
@@ -237,7 +251,7 @@ Para ver datos de una tabla (cuando exista):
 - **View/Edit Data** → **All Rows**
 
 <p align="center">
-  <img src="./img_pgAdmin.png" alt="Piscine Data Science – Module 0 – ex01 – Imagen de pgAdmin" width="100%">
+  <img src="./imgs/img_pgAdmin_05.png" alt="Piscine Data Science – Module 0 – ex01 – Imagen de pgAdmin" width="100%">
 </p>
 
 [↑ Volver al índice](#-índice)
