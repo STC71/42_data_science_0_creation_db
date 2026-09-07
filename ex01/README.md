@@ -195,7 +195,7 @@ Orden recomendado de los scripts:
 
 ## 🚀 Cómo implementarlo paso a paso (con pgAdmin)
 
-### Opción A — Con los scripts de este repositorio (recomendada en 42)
+### Opción A — Con los scripts de este repositorio (recomendado)
 
 1. Asegúrate de que EX00 está funcionando (`postgres_piscineds` en marcha).
 2. Ejecuta:
@@ -211,7 +211,7 @@ Orden recomendado de los scripts:
 1. Ve a la página oficial: [https://www.pgadmin.org/download/](https://www.pgadmin.org/download/)
 2. Descarga la versión para tu sistema operativo e instálala.
 3. Ábrela y sigue los pasos de conexión de más abajo.
-4. Suerte 🤞
+4. ... Suerte 🤞
 
 
 [↑ Volver al índice](#-índice)
@@ -249,7 +249,7 @@ Esta cuenta es solo para entrar en la interfaz de pgAdmin.
 
 ---
 
-## 🔌 Conectar pgAdmin a PostgreSQL
+## 🔌 Resumen para conectar pgAdmin a PostgreSQL
 
 Una vez dentro de pgAdmin:
 
@@ -264,7 +264,7 @@ Una vez dentro de pgAdmin:
    - Password: `mysecretpassword`
 4. Guarda.
 
-📖 **Guía de conexión paso a paso (detallada): [pgAdmin.md](./pgAdmin.md)**
+#### 📖 Guía de conexión paso a paso (detallada): [pgAdmin.md](./pgAdmin.md) <- Recomendable
 
 ### Explorar la base de datos
 
