@@ -16,9 +16,9 @@ Crear **una sola tabla** en PostgreSQL a partir de **un archivo CSV** que se enc
 
 | Requisito | Detalle |
 |-----------|---------|
-| Nombre de la tabla | Exactamente el nombre del CSV **sin la extensión**<br>Ejemplo: `data_2022_oct.csv` → tabla `data_2022_oct` |
+| Nombre de la tabla | Exactamente el nombre del CSV **sin la extensión**<br>Ejemplo: `data_2022_dec.csv` → tabla `data_2022_dec` |
 | Nombres de columnas | Deben coincidir **exactamente** con los del CSV |
-| Primera columna | Debe ser de tipo **DATETIME** (en PostgreSQL se llama `TIMESTAMP`) |
+| Primera columna | Debe ser de tipo fecha/hora (en PostgreSQL usamos `TIMESTAMPTZ`) |
 | Tipos de datos | Debes usar **al menos 6 tipos de datos diferentes** |
 | Tipos apropiados | No puedes poner todo como `TEXT`. Elige el tipo correcto para cada columna |
 
@@ -33,6 +33,48 @@ Dentro de `ex02/` debes entregar un archivo llamado `table.*`
 
 ---
 
+## 📦 Preparar el dataset
+
+El CSV forma parte de los recursos del subject, dentro de la carpeta `customer/`.
+Si todavía no lo tienes, abre el PDF o la página del proyecto en la intranet de 42,
+descarga el paquete de datos y descomprímelo.
+
+En este repositorio, el archivo usado por EX02 está en:
+
+```text
+../subject/customer/data_2022_dec.csv
+```
+
+Comprueba que el archivo existe y revisa su cabecera antes de cargarlo:
+
+```bash
+DATASET="../subject/customer/data_2022_dec.csv"
+ls -lh "$DATASET"
+head -n 3 "$DATASET"
+```
+
+Desde `ex02/`, copia el CSV al contenedor PostgreSQL. La ruta de la derecha es
+la ruta **dentro del contenedor** y debe coincidir con el `COPY` de `table.sql`:
+
+```bash
+DATASET="../subject/customer/data_2022_dec.csv"
+docker cp "$DATASET" \
+  postgres_piscineds:/tmp/data_2022_dec.csv
+```
+
+Comprueba que Docker lo recibió y que no está vacío:
+
+```bash
+docker exec postgres_piscineds \
+  ls -lh /tmp/data_2022_dec.csv
+```
+
+Si aparece un aviso de `Lchown` después de `docker cp`, comprueba primero este
+último comando. Si el archivo aparece con un tamaño razonable, puedes continuar:
+el aviso se refiere a permisos/propietario y no necesariamente ha impedido la copia.
+
+---
+
 ## 🧠 Explicación sencilla
 
 Un archivo CSV es como una hoja de Excel guardada en texto plano.  
@@ -40,7 +82,7 @@ Cada fila es un registro y cada columna es un tipo de información.
 
 Crear una tabla es como preparar una estantería específica dentro del almacén:
 
-- Decides el nombre de la estantería (`data_2022_oct`)
+- Decides el nombre de la estantería (`data_2022_dec`)
 - Decides qué cajones tendrá (las columnas)
 - Decides el tipo de cada cajón (número, texto, fecha…)
 - Luego vuelcas el contenido del CSV dentro de esa estantería.
@@ -51,12 +93,12 @@ Crear una tabla es como preparar una estantería específica dentro del almacén
 
 ### Paso 1: Mirar el contenido del CSV
 
-Abre el archivo CSV (por ejemplo `data_2022_oct.csv`) y mira la **primera línea** (la cabecera).  
+Abre el archivo CSV (por ejemplo `data_2022_dec.csv`) y mira la **primera línea** (la cabecera).  
 
-Ejemplo típico de cabecera en este proyecto:
+Cabecera de `data_2022_dec.csv`:
 
 ```
-event_time,event_type,product_id,category_id,category_code,brand,price,user_id,user_session
+event_time,event_type,product_id,price,user_id,user_session
 ```
 
 ### Paso 2: Decidir los tipos de datos (mínimo 6 diferentes)
@@ -65,7 +107,7 @@ Aquí tienes una propuesta típica y correcta:
 
 | Columna         | Tipo PostgreSQL     | Por qué |
 |-----------------|---------------------|---------|
-| event_time      | `TIMESTAMP`         | Es una fecha y hora (obligatorio primero) |
+| event_time      | `TIMESTAMPTZ`       | Es una fecha y hora (obligatorio primero) |
 | event_type      | `VARCHAR(50)`       | Texto corto |
 | product_id      | `BIGINT`            | Número entero grande |
 | category_id     | `BIGINT`            | Número entero grande |
@@ -75,7 +117,7 @@ Aquí tienes una propuesta típica y correcta:
 | user_id         | `BIGINT`            | Número entero grande |
 | user_session    | `UUID` o `VARCHAR`  | Identificador de sesión |
 
-Con esta lista ya tienes **más de 6 tipos diferentes**.
+En `data_2022_dec` se usan exactamente seis tipos diferentes, cumpliendo el mínimo exigido.
 
 ### Paso 3: Crear el script
 
@@ -109,7 +151,7 @@ COPY data_2022_dec (
     user_session
 )
 
-FROM '/ruta/completa/al/archivo/data_2022_oct.csv'  -- Ejemplo: FROM '/tmp/data_2022_dec.csv'
+FROM '/tmp/data_2022_dec.csv'
 
 WITH (
     FORMAT csv, 
@@ -123,13 +165,43 @@ Puedes usar `psycopg2` + `pandas` o solo `psycopg2`.
 
 ### Paso 4: Ejecutar el script
 
+Hay dos formas equivalentes. Elige una; no es necesario ejecutar ambas.
+
+#### Opción A: desde el host
+
+Como el CSV ya está dentro del contenedor y `table.sql` usa esa ruta interna:
+
 ```bash
 psql -U "$(whoami)" -d piscineds -h localhost -W
 
-# y después desde dentro de psql:
+# Después, dentro de psql:
 
 \i table.sql
 ```
+
+También puedes ejecutar el archivo directamente desde la terminal, estando en `ex02/`:
+
+```bash
+psql -U "$(whoami)" -d piscineds -h localhost -W -f table.sql
+```
+
+#### Opción B: ejecutar todo dentro del contenedor
+
+Esta opción copia también el SQL al contenedor y lo ejecuta allí:
+
+```bash
+docker cp "$PWD/table.sql" postgres_piscineds:/tmp/table.sql
+docker exec postgres_piscineds ls -lh /tmp/table.sql
+docker exec -it postgres_piscineds \
+  psql -U "$(whoami)" -d piscineds -W -f /tmp/table.sql
+```
+
+La salida esperada incluye `DROP TABLE`, `CREATE TABLE` y `COPY` seguido del
+número de filas cargadas. Si reejecutas el script, el `DROP TABLE IF EXISTS`
+permite empezar de nuevo sin dejar la tabla anterior.
+
+> `\i` ejecuta un archivo SQL desde el cliente `psql`; no sirve para abrir un
+> CSV. El CSV se carga mediante el `COPY` que está dentro de `table.sql`.
 
 ### Paso 5: Verificar
 
@@ -154,19 +226,20 @@ SELECT * FROM data_2022_dec LIMIT 5;
 ## 💡 Consejos importantes
 
 1. **Usa siempre `COPY`** en vez de `INSERT` fila a fila. Es muchísimo más rápido.
-2. La ruta del CSV debe ser accesible desde el contenedor Docker (puedes montar un volumen o copiar el archivo dentro).
+2. La ruta del CSV debe ser accesible desde el servidor PostgreSQL: en este caso, `/tmp/data_2022_dec.csv` dentro del contenedor.
 3. Si hay valores vacíos o nulos, PostgreSQL los acepta si la columna no tiene `NOT NULL`.
-4. Prueba primero con un CSV pequeño para no perder tiempo.
+4. Para datasets grandes, comprueba primero la ruta y la cabecera antes de iniciar la carga.
 
 ---
 
 ## ✅ Checklist de este ejercicio
 
 - [ ] La tabla se llama exactamente como el CSV (sin `.csv`)
-- [ ] La primera columna es `TIMESTAMP`
+- [ ] La primera columna es `TIMESTAMPTZ`
 - [ ] Hay al menos 6 tipos de datos diferentes
 - [ ] Los nombres de las columnas coinciden con el CSV
 - [ ] Los datos se han importado correctamente
+- [ ] El CSV está dentro del contenedor en `/tmp/data_2022_dec.csv`
 - [ ] El archivo se llama `table.*`
 
 <br>
