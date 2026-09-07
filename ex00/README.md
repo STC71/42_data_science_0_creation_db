@@ -40,6 +40,10 @@ Debemos poder conectarnos con este comando (según el subject):
 ```bash
 psql -U «tu_login» -d piscineds -h localhost -W
 ```
+o con este otro que cogería tu login automáticamente...
+```bash
+psql -U "$(whoami)" -d piscineds -h localhost -W
+```
 
 Cuando pida la contraseña, escribes: `mysecretpassword`
 

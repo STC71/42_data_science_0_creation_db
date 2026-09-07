@@ -124,11 +124,11 @@ Puedes usar `psycopg2` + `pandas` o solo `psycopg2`.
 ### Paso 4: Ejecutar el script
 
 ```bash
-# Si es un archivo .sql
-psql -U tu_login -d piscineds -h localhost -W -f table.sql
+psql -U "$(whoami)" -d piscineds -h localhost -W
 
-# O desde dentro de psql:
-\i /ruta/a/table.sql
+# y después desde dentro de psql:
+
+\i table.sql
 ```
 
 ### Paso 5: Verificar
@@ -138,16 +138,18 @@ psql -U tu_login -d piscineds -h localhost -W -f table.sql
 \dt
 
 -- Contar las filas
-SELECT COUNT(*) FROM data_2022_oct;
+SELECT COUNT(*) FROM data_2022_dec;
 
 -- Ver las primeras filas
-SELECT * FROM data_2022_oct LIMIT 5;
+SELECT * FROM data_2022_dec LIMIT 5;
 
 -- Ver la estructura de la tabla
-\d data_2022_oct
+\d data_2022_dec
 ```
-
----
+<br>
+<p align="center">
+  <img src="./imgs/psql_00.png" alt="Piscine Data Science – Module 0 – EX02 – pgql_sql" width="95%">
+</p>
 
 ## 💡 Consejos importantes
 
@@ -166,6 +168,11 @@ SELECT * FROM data_2022_oct LIMIT 5;
 - [ ] Los nombres de las columnas coinciden con el CSV
 - [ ] Los datos se han importado correctamente
 - [ ] El archivo se llama `table.*`
+
+<br>
+<p align="center">
+  <img src="./imgs/img_pgAdmin_06.png" alt="Piscine Data Science – Module 0 – EX02 – pgAdmin" width="95%">
+</p>
 
 ---
 
