@@ -148,7 +148,7 @@ SELECT * FROM data_2022_dec LIMIT 5;
 ```
 <br>
 <p align="center">
-  <img src="./imgs/psql_00.png" alt="Piscine Data Science – Module 0 – EX02 – pgql_sql" width="95%">
+  <img src="./imgs/psql_00.png" alt="Piscine Data Science – Module 0 – EX02 – pgql_sql" width="100%">
 </p>
 
 ## 💡 Consejos importantes
@@ -171,7 +171,7 @@ SELECT * FROM data_2022_dec LIMIT 5;
 
 <br>
 <p align="center">
-  <img src="./imgs/img_pgAdmin_06.png" alt="Piscine Data Science – Module 0 – EX02 – pgAdmin" width="95%">
+  <img src="./imgs/img_pgAdmin_06.png" alt="Piscine Data Science – Module 0 – EX02 – pgAdmin" width="100%">
 </p>
 
 ---
