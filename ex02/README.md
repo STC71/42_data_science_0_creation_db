@@ -83,30 +83,41 @@ Con esta lista ya tienes **más de 6 tipos diferentes**.
 
 Crea el archivo `ex02/table.sql`:
 
+#### 📘 Guía SQL paso a paso: [SQL.md](./SQL.md) <- Recomendable
+
 ```sql
 -- Borrar la tabla si ya existe (útil para pruebas)
-DROP TABLE IF EXISTS data_2022_oct;
+DROP TABLE IF EXISTS data_2022_dec;
 
 -- Crear la tabla
-CREATE TABLE data_2022_oct (
-    event_time      TIMESTAMP,          -- 1. DATETIME obligatorio
-    event_type      VARCHAR(50),        -- 2
-    product_id      BIGINT,             -- 3
-    category_id     BIGINT,             -- 4
-    category_code   VARCHAR(255),       -- 5
-    brand           VARCHAR(100),       -- 6
-    price           NUMERIC(10,2),      -- 7
-    user_id         BIGINT,             -- 8
-    user_session    VARCHAR(100)        -- 9
+CREATE TABLE data_2022_dec (
+    event_time    TIMESTAMPTZ,     -- cuándo ocurrió el evento
+    event_type    VARCHAR(50),     -- tipo de acción (view, cart, ...)(ver, carrito, ...)
+    product_id    INTEGER,         -- identificador del producto
+    price         NUMERIC(10,2),   -- precio del producto
+    user_id       BIGINT,          -- identificador del usuario
+    user_session  UUID             -- identificador de la sesión
 );
 
 -- Importar los datos de forma rápida y eficiente
-COPY data_2022_oct
-FROM '/ruta/completa/al/archivo/data_2022_oct.csv'
-WITH (FORMAT csv, HEADER true);
+COPY data_2022_dec (
+    event_time, 
+    event_type, 
+    product_id, 
+    price, 
+    user_id, 
+    user_session
+)
+
+FROM '/ruta/completa/al/archivo/data_2022_oct.csv'  -- Ejemplo: FROM '/tmp/data_2022_dec.csv'
+
+WITH (
+    FORMAT csv, 
+    HEADER true
+); 
 ```
 
-#### Opción B – Script Python (más flexible)
+#### Opción B – Script Python (más flexible, pero no presente en este caso)
 
 Puedes usar `psycopg2` + `pandas` o solo `psycopg2`.
 
