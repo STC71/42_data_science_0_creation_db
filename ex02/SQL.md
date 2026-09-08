@@ -1,7 +1,7 @@
 # 📘 Guía SQL – EX02 First table
 
 <p align="center">
-  <img src="./imgs/banner_sql.jpg" alt="Piscine Data Science – Module 0 – EX02 – SQL" width="100%">
+  <img src="../imgs/banner_07_sql.jpg" alt="Piscine Data Science – Module 0 – EX02 – SQL" width="100%">
 </p>
 
 [← Volver al README de EX02](README.md) · [← README principal](../README.md)
