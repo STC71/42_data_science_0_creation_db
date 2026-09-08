@@ -73,15 +73,40 @@ Crea el archivo `ex03/automatic_table.py`:
 
 ```python
 import os
-import psycopg2
+import importlib.util
 from pathlib import Path
 
+
+def ensure_dependencies():
+    dependencies = {
+        "psycopg2": "psycopg2-binary",
+        "dotenv": "python-dotenv",
+    }
+    missing = [
+        package
+        for module, package in dependencies.items()
+        if importlib.util.find_spec(module) is None
+    ]
+    if missing:
+        import subprocess
+        import sys
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+
+
+ensure_dependencies()
+
+import psycopg2
+from dotenv import load_dotenv
+
 # ========== CONFIGURACIÓN ==========
+ENV_FILE = Path(__file__).resolve().parents[1] / "ex00" / ".env"
+load_dotenv(ENV_FILE)
+
 DB_CONFIG = {
     "host": "localhost",
-    "database": "piscineds",
-    "user": "tu_login",          # ← cambia por tu login
-    "password": "mysecretpassword"
+    "database": os.environ["POSTGRES_DB"],
+    "user": os.environ["POSTGRES_USER"],
+    "password": os.environ["POSTGRES_PASSWORD"]
 }
 
 CUSTOMER_FOLDER = Path("../customer")   # ajusta la ruta según donde esté
@@ -138,6 +163,14 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+Al ejecutarse, el script comprueba si faltan `psycopg2-binary` o
+`python-dotenv` y los instala automáticamente. Para ello necesita conexión a
+Internet y permisos para ejecutar `pip`.
+
+El script reutiliza las variables `POSTGRES_USER`, `POSTGRES_PASSWORD` y
+`POSTGRES_DB` definidas en `ex00/.env`. No subas ese archivo a Git ni copies
+sus credenciales directamente en el código.
 
 ### Opción alternativa: Script Bash + psql
 
