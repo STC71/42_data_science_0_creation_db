@@ -17,17 +17,18 @@
 5. [¿Qué es Docker Compose?](#-qué-es-docker-compose)
 6. [Por qué Docker en EX00](#-por-qué-docker-en-ex00)
 7. [Anatomía de un `docker-compose.yml` (PostgreSQL)](#-anatomía-de-un-docker-composeyml-postgresql)
-8. [Archivo `.env` y buenas prácticas](#-archivo-env-y-buenas-prácticas)
-9. [Comandos esenciales del día a día](#-comandos-esenciales-del-día-a-día)
-10. [Ciclo de vida: arrancar, parar, borrar](#-ciclo-de-vida-arrancar-parar-borrar)
-11. [`docker exec` y PostgreSQL](#-docker-exec-y-postgresql)
-12. [Copiar archivos al contenedor (`docker cp`)](#-copiar-archivos-al-contenedor-docker-cp)
-13. [Persistencia de datos (muy importante)](#-persistencia-de-datos-muy-importante)
-14. [Buenas prácticas en el campus 42](#-buenas-prácticas-en-el-campus-42)
-15. [Errores frecuentes](#-errores-frecuentes)
-16. [Mapa con el resto del módulo](#-mapa-con-el-resto-del-módulo)
-17. [Mini glosario](#-mini-glosario)
-18. [Navegación](#-navegación)
+8. [Qué hace el sistema “bajo el capó” (paso a paso)](#-qué-hace-el-sistema-bajo-el-capó-paso-a-paso)
+9. [Archivo `.env` y buenas prácticas](#-archivo-env-y-buenas-prácticas)
+10. [Comandos esenciales del día a día](#-comandos-esenciales-del-día-a-día)
+11. [Ciclo de vida: arrancar, parar, borrar](#-ciclo-de-vida-arrancar-parar-borrar)
+12. [`docker exec` y PostgreSQL](#-docker-exec-y-postgresql)
+13. [Copiar archivos al contenedor (`docker cp`)](#-copiar-archivos-al-contenedor-docker-cp)
+14. [Persistencia de datos (muy importante)](#-persistencia-de-datos-muy-importante)
+15. [Buenas prácticas en el campus 42](#-buenas-prácticas-en-el-campus-42)
+16. [Errores frecuentes](#-errores-frecuentes)
+17. [Mapa con el resto del módulo](#-mapa-con-el-resto-del-módulo)
+18. [Mini glosario](#-mini-glosario)
+19. [Navegación](#-navegación)
 
 ---
 
@@ -245,6 +246,295 @@ Así no escribes la contraseña dentro del YAML (buena práctica tipo Inception)
 [↑ Volver al índice](#-índice)
 
 ---
+
+
+## 🔍 Qué hace el sistema “bajo el capó” (paso a paso)
+
+Cuando escribes, desde la carpeta donde está tu `docker-compose.yml`:
+
+```bash
+docker-compose up -d
+```
+
+**no** estás “encendiendo PostgreSQL con magia”.
+
+Estás diciendo al sistema:
+
+> “Lee este **plano** (`docker-compose.yml`), prepara lo que falte y deja el servicio corriendo en segundo plano.”
+
+A continuación vemos **qué ocurre por dentro**, paso a paso, y con ejemplos para verlo todo con más claridad.
+
+---
+
+### Paso A — Leer y entender el plano
+
+Compose abre el archivo `docker-compose.yml` y resuelve las variables del estilo `${POSTGRES_USER}`.
+
+Si en la misma carpeta existe un archivo `.env`, **inyecta** esos valores en el plano.
+
+**Ejemplo cotidiano:**  
+Es como una receta de cocina que te dice “añade *la cantidad de sal que indica la nota del frigorífico*”.  
+El `.env` es esa nota del frigorífico (una información que no has querido incluir directamente en la receta):
+
+```text
+POSTGRES_USER=tu_login
+POSTGRES_PASSWORD=mysecretpassword
+POSTGRES_DB=piscineds
+```
+
+Compose lee la receta + la nota y ya sabe:
+
+```text
+Usuario   = tu_login
+Password  = mysecretpassword
+Base      = piscineds
+```
+
+Si faltan datos en el `.env`, el resultado puede no coincidir con lo que pide el subject.
+
+---
+
+### Paso B — ¿Tengo ya la imagen `postgres:15`?
+
+Una **imagen** es una **plantilla lista para usar**: no es todavía “tu” base de datos, es el molde.
+
+**Ejemplo cotidiano:**  
+La imagen es como el **plano y el pack de piezas** de un mueble del IKEA (PostgreSQL 15 ya preparado).  
+Aún no es el mueble montado en tu salón; es el paquete cerrado.
+
+- Si Docker **ya tiene** esa imagen en el ordenador (el paquete de cerrado con lo necesario para montar el mueble) → la reutiliza.  
+- Si **no la tiene** → la **descarga del registro** (se encarga de pedir el paquete por Internet).
+
+**¿Qué es “el registro”?**  
+Un almacén en Internet (por ejemplo Docker Hub) donde están publicadas muchas imágenes oficiales.  
+La primera vez, Docker va a ese almacén, descarga `postgres:15` y la guarda en tu ordenador para no volver a bajarla cada día.
+
+```text
+Primera vez:  Internet (registro)  →  descarga  →  imagen guardada en tu PC
+Siguientes:   usa la imagen que ya tienes
+```
+
+---
+
+### Paso C — ¿Existe el volumen de datos?
+
+El YAML suele decir algo como:
+
+```yaml
+volumes:
+  - postgres_data:/var/lib/postgresql/data
+```
+
+Un **volumen** es algo así como **las cajas de un trastero** donde se guardan datos importantes.
+
+**Ejemplo cotidiano:**  
+Mientras que el contenedor es una **furgoneta de mudanza** (se puede aparcar, mover o sustituir).  
+El volumen sin embargo es el **trastero del edificio**: aunque cambies de furgoneta, las cajas del trastero siguen ahí.
+
+- Si el volumen `postgres_data` **no existe** → Compose lo **crea**.  
+- Si **ya existe** → lo **reutiliza** (ahí están tus tablas de ayer, las cajas en el trastrero).
+
+Dentro del contenedor, ese cajón se “engancha” en la carpeta:
+
+```text
+/var/lib/postgresql/data
+```
+
+que es el sitio donde PostgreSQL guarda sus ficheros internos.
+
+Por eso:
+
+- borrar solo el contenedor (cambiar de furgoneta) **no** implica borrar siempre los datos,
+- aunque ¡CUIDADO!`docker-compose down -v` sí que puede tirar el trastero entero (**se pierden los datos**).
+
+---
+
+### Paso D — Crear (o recrear) el contenedor
+
+Aquí Docker monta la pieza central. Vamos término a término, sin dar nada por sentado.
+
+#### ¿Qué es un contenedor?
+
+Una **caja en marcha** creada a partir de la imagen.
+
+**Ejemplo:** la imagen es el plano para un puesto de limonada; mientras que el contenedor es **tu** puesto ya montado en la calle hoy.
+
+#### ¿Qué es una instancia?
+
+Significa: “una copia concreta en ejecución”.  
+Puedes tener la misma imagen y, en teoría, varios contenedores (varios puestos de limonada iguales); en EX00 normalmente tienes **uno**: `postgres_piscineds`.
+
+#### ¿Qué es una capa?
+
+Imagina transparencias apiladas:
+
+1. Capa base del sistema.  
+2. Capa con PostgreSQL instalado (viene de la imagen).  
+3. Pequeños cambios de **este** contenedor.
+
+Tú no gestionas las capas a mano; solo es útil saber que el contenedor **no copia todo desde cero** cada vez de forma absurda: reutiliza la plantilla y añade lo suyo.
+
+#### ¿Qué es un volumen? (otra vez, porque importa)
+
+El **trastero** enganchado a la caja.  
+Los datos de la base viven ahí, no “solo en la memoria temporal del contenedor”.
+
+#### ¿Qué son las variables de entorno?
+
+Son **ajustes que se le pasan al programa al arrancar**, como interruptores, valore o instrucciones.
+
+**Ejemplo cotidiano:**  
+Al encender una lavadora eliges “algodón, 40 °C, centrifugado”.  
+Eso no es la ropa en si misma; son **parámetros** para su lavado.
+
+Aquí:
+
+```text
+POSTGRES_USER       → quién es el dueño inicial
+POSTGRES_PASSWORD   → la llave
+POSTGRES_DB         → el nombre del primer cajón de datos (piscineds)
+```
+
+#### ¿Qué es la red de Compose?
+
+Un **pasillo privado** por el que los contenedores de un mismo proyecto podrían hablar entre sí.
+
+En EX00 casi solo tienes PostgreSQL, así que apenas la notas.  
+Compose igual crea una red por defecto para dejar el escenario ordenado.
+
+#### ¿Qué es un puerto? (muy importante)
+
+Un **puerto** es un **número de puerta** por donde un programa acepta conexiones.
+
+**Ejemplo cotidiano:**  
+En un bloque de pisos, el portal es la dirección (el ordenador).  
+El **piso 5432** es el puerto: “llame usted al 5432 para hablar con PostgreSQL”.
+
+PostgreSQL, por convención, escucha en el puerto **5432**.
+
+#### ¿Qué es el mapeo de puertos?
+
+Conectar una puerta de **tu ordenador** con una puerta **dentro** del contenedor.
+
+```yaml
+ports:
+  - "5432:5432"
+```
+
+Se lee:
+
+```text
+puerto 5432 en TU máquina  →  puerto 5432 DENTRO del contenedor
+```
+
+**Ejemplo:**  
+El contenedor es un local interior sin escaparate a la calle.  
+El mapeo es poner un **timbre en la calle** (5432 de tu PC) que suena dentro del local (5432 de PostgreSQL).
+
+Sin mapeo, PostgreSQL podría estar *dentro* de la caja y tú no podrías entrar desde fuera con `psql -h localhost` ni con pgAdmin.
+
+Con la imagen, el volumen, las variables, la red y los puertos, Docker deja creado el contenedor `postgres_piscineds` (o el nombre que hayas puesto).
+
+---
+
+### Paso E — Inicializar datos (solo la primera vez) y arrancar PostgreSQL
+
+Dentro de la imagen oficial de PostgreSQL hay un **script de arranque** (un programa que se ejecuta al iniciaar el contenedor).
+
+#### ¿Dónde se inicializa el directorio de datos?
+
+En la carpeta de datos de PostgreSQL, que en nuestro compose está ligada al volumen:
+
+```text
+/var/lib/postgresql/data
+```
+
+Ahí PostgreSQL guarda sus ficheros internos (no son tus CSV todavía; es el “sistema de archivadores” del motor).
+
+#### ¿Cómo y por qué se inicializa?
+
+- **Cómo:** el script de arranque prepara esa carpeta, crea el usuario, la contraseña y la base `piscineds` según las variables de entorno.  
+- **Por qué:** un motor de base de datos necesita un espacio inicial ordenado antes de aceptar datos. Es como **montar las estanterías vacías** antes de guardar cajas.
+
+Esto ocurre sobre todo cuando el volumen está **vacío** (primera vez).
+
+Si el volumen **ya tenía datos**, no vuelve a “construir el almacén desde cero”: simplemente **reutiliza** lo que había y arranca el servidor.
+
+#### ¿Qué significa “arrancar el servicio y dejarlo escuchando”?
+
+- **Arrancar el servicio** = poner en marcha el programa PostgreSQL.  
+- **Escuchando** = quedarse a la espera de peticiones en un puerto (el 5432 interno), como un mostrador abierto al público.
+
+Hasta que no escucha, no puedes conectar con `psql` ni con pgAdmin.
+
+---
+
+### Paso F — Publicar el puerto (el timbre a la calle)
+
+Aunque PostgreSQL ya escuche *dentro* del contenedor, falta el enlace con tu máquina.
+
+Eso es otra vez el **mapeo de puertos**:
+
+```text
+localhost:5432 (tu PC)  →  5432 (PostgreSQL dentro del contenedor)
+```
+
+**Publicar el puerto** significa: “hacer accesible ese servicio desde fuera del contenedor”.
+
+**Ejemplo:**  
+La tienda ya está abierta en el patio interior (contenedor).  
+Publicar el puerto es abrir la **entrada desde la acera** para que los clientes (psql, pgAdmin, scripts) puedan entrar.
+
+Por eso el subject puede pedir:
+
+```bash
+psql -U tu_login -d piscineds -h localhost -W
+```
+
+`localhost` + puerto `5432` funcionan gracias a este mapeo.
+
+---
+
+### Paso G — Segundo plano (`-d`)
+
+La opción `-d` significa *detached* (separado / en segundo plano).
+
+**¿Qué implica?**
+
+- El contenedor **sigue corriendo**.  
+- Tu terminal **no se queda bloqueada** mostrando logs todo el tiempo.  
+- Puedes seguir escribiendo otros comandos.
+
+**Ejemplo cotidiano:**  
+Encender la lavadora y **no** quedarte mirándola dos horas.  
+La lavadora sigue; tú mientras tanto haces otra cosa.
+
+Para mirar lo que ocurre dentro:
+
+```bash
+docker logs postgres_piscineds
+```
+
+`Ctrl+C` en un `docker logs -f` solo deja de mostrar logs; **no** apaga el contenedor.
+
+---
+
+### Resumen visual de los siete pasos
+
+```text
+A. Leer plano (YAML + .env)
+B. ¿Imagen postgres:15? → usar o descargar del registro
+C. ¿Volumen de datos? → crear o reutilizar (trastero)
+D. Crear contenedor (caja + env + red + puertos)
+E. Inicializar (1ª vez) y arrancar PostgreSQL escuchando
+F. Publicar puerto 5432 en localhost
+G. Quedar en segundo plano (-d)
+        ↓
+   Ya puedes conectar con psql / pgAdmin
+```
+
+[↑ Volver al índice](#-índice)
+
 
 ## 🔐 Archivo `.env` y buenas prácticas
 
