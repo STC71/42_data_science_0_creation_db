@@ -174,6 +174,8 @@ Sigue las preguntas en pantalla. Al final deberías poder conectar a `piscineds`
 
 #### Paso 1: Crear el archivo `docker-compose.yml`
 
+####  🐳 Guía Docker: [docker.md](./docker.md)
+
 Abre un editor de texto y crea el archivo `ex00/docker-compose.yml` con este contenido:
 
 ```yaml

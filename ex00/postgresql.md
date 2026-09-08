@@ -1,7 +1,7 @@
 # 🐘 Guía PostgreSQL + psql – EX00 y la Piscine Data Science
 
 <p align="center">
-  <img src="../imgs/banner_00.jpg" alt="Piscine Data Science – Module 0 – PostgreSQL" width="100%">
+  <img src="../imgs/banner_05_postgresql.jpg" alt="Piscine Data Science – Module 0 – PostgreSQL" width="100%">
 </p>
 
 [← Volver al README de EX00](README.md) · [← README principal](../README.md)
@@ -204,6 +204,8 @@ Eso significa: *entra en el contenedor y ahí ejecuta psql*.
 ## 🐳 Cómo encaja todo con EX00 (Docker)
 
 El subject permite PostgreSQL instalado en la máquina, en una VM, o con **Docker Compose**.
+
+#### 🐳 Guía Docker: [docker.md](./docker.md)
 
 En el camino Docker típico de este módulo:
 
