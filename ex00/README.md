@@ -72,6 +72,8 @@ En este repositorio también encontrarás un script de ayuda (opcional, pero muy
 
 ## 🧠 Explicación sencilla
 
+#### 🐘 Guía PostgreSQL + psql: [postgresql.md](./postgresql.md)
+
 Imagina que PostgreSQL es un **almacén grande y profesional**.  
 Docker es como una **caja mágica** que contiene ese almacén ya montado y listo para usar.  
 
