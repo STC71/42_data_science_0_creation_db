@@ -1,7 +1,7 @@
 # 🐳 Guía Docker – EX00 y la Piscine Data Science
 
 <p align="center">
-  <img src="../imgs/banner_00.jpg" alt="Piscine Data Science – Module 0 – Docker" width="100%">
+  <img src="../imgs/banner_06_docker.jpg" alt="Piscine Data Science – Module 0 – Docker" width="100%">
 </p>
 
 [← Volver al README de EX00](README.md) · [← README principal](../README.md)
@@ -41,7 +41,7 @@ Para cualquier persona de la **Piscine Data Science** en 42 que:
 - quiera evitar borrados accidentales de datos.
 
 Es **genérica**: sirve para cualquier login.  
-Donde veas `tu_login` o `$(whoami)`, usa tu usuario de 42.
+Donde veas **`tu_login`** (sustituye por tu login) o usa **`$(whoami)`** (que cogerá tu login del sistema).
 
 [↑ Volver al índice](#-índice)
 
@@ -72,7 +72,7 @@ Sin Docker, cada persona instalaría PostgreSQL de forma distinta:
 - versiones diferentes,
 - rutas distintas,
 - problemas de permisos (`sudo`),
-- “en mi máquina funciona”.
+- “en mi máquina funciona... ¿Por qué en la tuya no?”.
 
 **Docker** empaqueta una aplicación (aquí, PostgreSQL) con su entorno en una **caja reproducible**.
 
@@ -85,7 +85,7 @@ Analogía:
 | Volumen | Un cajón externo donde guardas lo importante |
 | `docker-compose.yml` | Instrucciones para montar el escenario completo |
 
-En el campus, Docker permite que **todo el mundo** tenga el mismo PostgreSQL 15 sin instalarlo a mano en el sistema.
+Docker permite que **todo el mundo** tenga el mismo PostgreSQL 15 sin tener que instalarlo a mano en el sistema.
 
 [↑ Volver al índice](#-índice)
 
@@ -160,7 +160,7 @@ docker-compose down -v
 ```
 
 > En instalaciones recientes el comando puede ser `docker compose` (sin guion).  
-> En el campus suele funcionar `docker-compose`. Prueba ambos si uno no existe.
+> Por lo generar suele funcionar `docker-compose`. Prueba ambos si uno no lo hace.
 
 [↑ Volver al índice](#-índice)
 
@@ -189,7 +189,7 @@ Tu entregable típico en `ex00/`:
 docker-compose.yml
 ```
 
-(opcionalmente acompañado de scripts de ayuda, pero el subject pide **uno** de: compose / `setup.sh` / `VM-instructions.txt`).
+(podríamos decidir acompañarlo de scripts de ayuda y .md, pero el subject pide **uno** de: compose / `setup.sh` / `VM-instructions.txt`, así que: mejor **entregar solamente el fichero que nos piden**).
 
 [↑ Volver al índice](#-índice)
 
@@ -235,12 +235,12 @@ volumes:
 ### Sobre la línea `version:`
 
 En Compose moderno la clave `version:` es **obsoleta** y se puede omitir.  
-Si aparece un *warning*, no suele impedir el arranque; puedes quitarla.
+Si la dejas y aparece un *warning*, no suele impedir el arranque; pero también puedes quitarla (recomendado).
 
 ### Variables `${...}`
 
 Leen valores del entorno o de un archivo **`.env`** en la misma carpeta.  
-Así no escribes la contraseña en claro dentro del YAML (buena práctica tipo Inception).
+Así no escribes la contraseña dentro del YAML (buena práctica tipo Inception).
 
 [↑ Volver al índice](#-índice)
 
@@ -273,9 +273,9 @@ echo ".env" >> .gitignore
 | Buena práctica | Por qué |
 |----------------|---------|
 | Credenciales en `.env` | No hardcodear en el compose |
-| `.env` en `.gitignore` | No subir secretos al repo |
-| Misma contraseña del subject | `mysecretpassword` es obligatoria en el enunciado |
-| Usuario = login de 42 | Lo exige el subject |
+| `.env` en `.gitignore` | Impide subir secretos al repo |
+| Misma contraseña del subject | `mysecretpassword` es única y obligatoria |
+| Usuario = «tu_login« | También obligario. |
 
 **Importante:** `POSTGRES_USER` / `POSTGRES_DB` se aplican sobre todo cuando el **volumen se crea por primera vez**.  
 Si cambias el `.env` pero reutilizas un volumen antiguo, puedes ver usuarios o bases “viejas”. En ese caso hace falta recrear el volumen (destructivo) o gestionar usuarios a mano.
@@ -286,7 +286,7 @@ Si cambias el `.env` pero reutilizas un volumen antiguo, puedes ver usuarios o b
 
 ## ⌨️ Comandos esenciales del día a día
 
-Ejecuta estos comandos **desde la carpeta** donde está tu `docker-compose.yml` (salvo que indiques otra ruta).
+Ejecuta estos comandos **desde la carpeta donde está tu `docker-compose.yml`** (salvo que indiques otra ruta).
 
 ### Arrancar
 
@@ -294,7 +294,7 @@ Ejecuta estos comandos **desde la carpeta** donde está tu `docker-compose.yml` 
 docker-compose up -d
 ```
 
-`-d` = *detached* (en segundo plano).
+`-d` = *detached* (en segundo plano, así puedes seguir trabajando en la misma terminal).
 
 ### ¿Está corriendo?
 
@@ -329,7 +329,7 @@ docker stop postgres_piscineds
 docker-compose down
 ```
 
-### Parar y eliminar también volúmenes (¡borra datos de PostgreSQL!)
+### ⚠️ Parar y eliminar también volúmenes (¡borra datos de PostgreSQL!)
 
 ```bash
 docker-compose down -v
@@ -349,7 +349,7 @@ Usa `-v` solo cuando quieras un **reset total**.
 | Ver estado | `docker ps` | No |
 | Parar | `docker-compose stop` | No |
 | Quitar contenedor | `docker-compose down` | No (si el volumen sigue) |
-| Reset total | `docker-compose down -v` | **Sí** |
+| ⚠️ Reset total | `docker-compose down -v` | **Sí** |
 
 Regla práctica:
 
@@ -434,7 +434,7 @@ volumen Docker → montado en /var/lib/postgresql/data
 |-----------|-------------------------|
 | `stop` / reinicio del PC (con `restart` y volumen intacto) | Suele conservarlos |
 | `down` sin `-v` | Conserva el volumen |
-| `down -v` | **Borra** el volumen y los datos |
+| ⚠️ `down -v` | **Borra** el volumen y los datos |
 | Borrar el volumen a mano | **Borra** los datos |
 
 Para la piscine:
@@ -453,7 +453,7 @@ Para la piscine:
 3. Usa `container_name` fijo para no adivinar IDs en cada comando.  
 4. Publica `5432:5432` si quieres el comando del subject con `-h localhost`.  
 5. Comprueba `docker ps` **antes** de depurar SQL o pgAdmin.  
-6. Documenta en el README cómo arrancar (o usa un `start.sh` claro).  
+6. Documenta cómo arrancar (o usa el `start.sh`).  
 7. Recuerda: el evaluador debe poder levantar tu entorno con lo entregado en `ex00/`.
 
 [↑ Volver al índice](#-índice)
@@ -493,7 +493,7 @@ docker ps
 
 El volumen antiguo se inicializó con otras credenciales.
 
-- Solución destructiva: `docker-compose down -v` y volver a `up -d`.  
+- ⚠️ Solución destructiva: `docker-compose down -v` y volver a `up -d`.  
 - Solo si puedes permitirte perder los datos.
 
 ### `docker-compose: command not found`
@@ -508,7 +508,7 @@ y usa `docker compose` en lugar de `docker-compose`.
 
 ### Aviso `version is obsolete`
 
-Quita la línea `version:` del YAML. No afecta a la lógica del servicio.
+Quita la línea `version:` del YAML. No afecta a la lógica del servicio, es sólo una molestia.
 
 [↑ Volver al índice](#-índice)
 
@@ -565,5 +565,8 @@ Docker (esta guía) → PostgreSQL arriba → psql / pgAdmin → CREATE / COPY (
 
 ---
 
-*Piscine Data Science – Module 0 – Guía Docker*  
-*Referencia para el campus 42 – Material didáctico genérico*
+<br>
+<p align=center>
+   Piscine Data Science – Module 0 – Guía Docker – Material didáctico genérico <br><br>
+   sternero – 42 Málaga – septiembre 2026
+</p>
