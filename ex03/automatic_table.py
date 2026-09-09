@@ -90,7 +90,7 @@ def ensure_dependencies() -> None:
         # f"..." permite meter variables dentro de { }.
         # ', '.join(missing) = une los elementos de la lista con comas.
         # Ejemplo: ["a", "b"] → "a, b"
-        print(f"Instalando dependencias: {', '.join(missing)} ...")
+        print(f"🥁 Instalando dependencias: {', '.join(missing)} ...")
         subprocess.check_call(
             # check_call ejecuta un comando y espera a que termine.
             # Si el comando falla, lanza un error (no sigue como si nada).
@@ -188,12 +188,12 @@ def find_customer_folder(cli_arg: str | None = None) -> Path:
             return path    # devolvemos esa ruta y salimos de la función
 
     # Si llegamos aquí, no encontramos nada: mensaje claro y salida con error.
-    print("ERROR: no se encontró la carpeta customer/.")
+    print("🤬 ERROR: no se encontró la carpeta customer/.")
     print("Prueba:")
-    print("  python3 automatic_table.py /ruta/a/customer")
+    print(" 🧑‍💻 python3 automatic_table.py /ruta/a/customer")
     print("Candidatos mirados:")
     for path in candidates:
-        print(f"  - {path}")
+        print(f" 🕵️ - {path}")
     sys.exit(1)  # terminar el programa con código de error (1 = algo falló)
 
 
@@ -223,7 +223,7 @@ def create_table_from_csv(csv_path: Path) -> None:
     # .stem = nombre del fichero sin la extensión
     # Ejemplo: Path("data_2022_dec.csv").stem  →  "data_2022_dec"
     table_name = csv_path.stem
-    print(f"→ {csv_path.name}  ⇒  tabla «{table_name}»")
+    print(f"📤 → {csv_path.name}  ⇒  tabla «{table_name}» 📥")
 
     # Texto SQL que enviaremos a PostgreSQL.
     # f"""...""" = cadena de varias líneas donde {table_name} se sustituye
@@ -271,7 +271,7 @@ def create_table_from_csv(csv_path: Path) -> None:
         # Sin commit, en muchos casos los cambios no quedan persistidos.
         conn.commit()
 
-    print(f"  ✓ Tabla {table_name} creada e importada")
+    print(f"✅ Tabla {table_name} creada e importada")
 
 
 # ===========================================================================
@@ -297,7 +297,7 @@ def main() -> None:
     cli_path = sys.argv[1] if len(sys.argv) > 1 else None
 
     customer_dir = find_customer_folder(cli_path)
-    print(f"Carpeta customer: {customer_dir}")
+    print(f"🗂️ Carpeta customer: {customer_dir}")
 
     # glob("*.csv") = "dame todos los archivos cuyo nombre termina en .csv"
     # sorted(...)  = ordénalos alfabéticamente (dec, jan, nov, oct...)
@@ -306,18 +306,18 @@ def main() -> None:
 
     # "if not csv_files" = si la lista está vacía
     if not csv_files:
-        print("No hay archivos .csv en esa carpeta.")
+        print("🚫 No hay archivos .csv en esa carpeta.")
         sys.exit(1)
 
     # len(csv_files) = cuántos elementos tiene la lista
-    print(f"Se encontraron {len(csv_files)} CSV:\n")
+    print(f"🗃️ Se encontraron {len(csv_files)} CSV:\n")
 
     # Bucle for: "para cada archivo de la lista, ejecuta este bloque"
     # Es el corazón de lo "automático": no escribimos los nombres a mano.
     for csv_file in csv_files:
         create_table_from_csv(csv_file)
 
-    print("\nProceso terminado.")
+    print("\n✅ Proceso terminado con éxito. 🎉")
 
 
 # ---------------------------------------------------------------------------
