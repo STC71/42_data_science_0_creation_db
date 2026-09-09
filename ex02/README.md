@@ -103,16 +103,14 @@ event_time,event_type,product_id,price,user_id,user_session
 
 ### Paso 2: Decidir los tipos de datos (mínimo 6 diferentes)
 
-Aquí tienes una propuesta típica y correcta:
+Aquí tienes una propuesta típica y correcta a modo de **ejemplo**:
 
 | Columna         | Tipo PostgreSQL     | Por qué |
 |-----------------|---------------------|---------|
 | event_time      | `TIMESTAMPTZ`       | Es una fecha y hora (obligatorio primero) |
 | event_type      | `VARCHAR(50)`       | Texto corto |
 | product_id      | `BIGINT`            | Número entero grande |
-| category_id     | `BIGINT`            | Número entero grande |
 | category_code   | `VARCHAR(255)`      | Texto más largo |
-| brand           | `VARCHAR(100)`      | Texto medio |
 | price           | `NUMERIC(10,2)`     | Número con decimales (precio) |
 | user_id         | `BIGINT`            | Número entero grande |
 | user_session    | `UUID` o `VARCHAR`  | Identificador de sesión |

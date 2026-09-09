@@ -67,102 +67,38 @@ Es como tener un robot que monta todas las estanterías del almacén solo.
 
 ## 🚀 Cómo implementarlo paso a paso
 
+### ¿Es Python la mejor elección?
+
+En las instrucciones se nos pide/acepta: **automatic_table**.*<br> Por lo que podemos usar: <i>Python, Bash, SQL embebido, etc.</i>
+
+| Opción | Ventajas | Inconvenientes
+|---|---|---|
+|Python (.py) | **Muy claro**, pathlib + bucle, copy_expert rápido, fácil de leer en evaluación | Hace falta psycopg2 (o instalarlo) |
+| Bash + psql | Pocas dependencias si ya tienes psql/docker exec | **Más frágil** con rutas, comillas y errores |
+| Solo SQL | **No aplica bien**: SQL solo no “lista” ficheros del disco de forma portable |
+
+**Python** suele ser la **mejor opción** porque:
+
+- El “robot” (listar CSV + crear tabla + cargar) se expresa de forma natural.
+- Evitas hardcodear nombres con Path.glob("*.csv").
+- La carga masiva con copy_expert es la adecuada (como COPY).
+- Es lo que la mayoría de evaluadores espera ver en un automatic_table.py.
+
+Bash es válido si lo controlas bien; no es incorrecto respecto al subject.
+Pero **Python es más didáctico, mantenible y alineado con el resto del módulo**.
+
+En **resumen**:
+
+| Pregunta | Respuesta |
+|---|---|
+| ¿Contemplar otra ubicación de customer/? | Sí — rutas relativas + opcionalmente argumento
+| ¿Hardcodear /sgoinfre/students/sternero/...? | No | 
+| ¿Mejor extensión? | .py recomendada; Bash también cumple si está bien hecho | 
+| ¿Esquema de columnas? | El de 6 campos que ya validasteis en EX02 | 
+
 ### Opción recomendada: Script en Python
 
 Crea el archivo `ex03/automatic_table.py`:
-
-```python
-import os
-import importlib.util
-from pathlib import Path
-
-
-def ensure_dependencies():
-    dependencies = {
-        "psycopg2": "psycopg2-binary",
-        "dotenv": "python-dotenv",
-    }
-    missing = [
-        package
-        for module, package in dependencies.items()
-        if importlib.util.find_spec(module) is None
-    ]
-    if missing:
-        import subprocess
-        import sys
-        subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
-
-
-ensure_dependencies()
-
-import psycopg2
-from dotenv import load_dotenv
-
-# ========== CONFIGURACIÓN ==========
-ENV_FILE = Path(__file__).resolve().parents[1] / "ex00" / ".env"
-load_dotenv(ENV_FILE)
-
-DB_CONFIG = {
-    "host": "localhost",
-    "database": os.environ["POSTGRES_DB"],
-    "user": os.environ["POSTGRES_USER"],
-    "password": os.environ["POSTGRES_PASSWORD"]
-}
-
-CUSTOMER_FOLDER = Path("../customer")   # ajusta la ruta según donde esté
-# ===================================
-
-def get_connection():
-    return psycopg2.connect(**DB_CONFIG)
-
-def create_table_from_csv(csv_path: Path):
-    table_name = csv_path.stem          # nombre sin extensión
-    print(f"Procesando: {csv_path.name} → tabla {table_name}")
-
-    # Aquí defines la estructura (puedes hacerla más inteligente leyendo la cabecera)
-    create_sql = f"""
-    DROP TABLE IF EXISTS {table_name};
-    CREATE TABLE {table_name} (
-        event_time      TIMESTAMP,
-        event_type      VARCHAR(50),
-        product_id      BIGINT,
-        category_id     BIGINT,
-        category_code   VARCHAR(255),
-        brand           VARCHAR(100),
-        price           NUMERIC(10,2),
-        user_id         BIGINT,
-        user_session    VARCHAR(100)
-    );
-    """
-
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(create_sql)
-            # Importación eficiente
-            with open(csv_path, "r") as f:
-                next(f)  # saltar cabecera
-                cur.copy_expert(
-                    f"COPY {table_name} FROM STDIN WITH CSV",
-                    f
-                )
-        conn.commit()
-    print(f"  ✓ Tabla {table_name} creada e importada")
-
-def main():
-    csv_files = list(CUSTOMER_FOLDER.glob("*.csv"))
-    if not csv_files:
-        print("No se encontraron archivos CSV en customer/")
-        return
-
-    print(f"Se encontraron {len(csv_files)} archivos CSV")
-    for csv_file in sorted(csv_files):
-        create_table_from_csv(csv_file)
-
-    print("\n¡Proceso terminado!")
-
-if __name__ == "__main__":
-    main()
-```
 
 Al ejecutarse, el script comprueba si faltan `psycopg2-binary` o
 `python-dotenv` y los instala automáticamente. Para ello necesita conexión a
@@ -171,6 +107,8 @@ Internet y permisos para ejecutar `pip`.
 El script reutiliza las variables `POSTGRES_USER`, `POSTGRES_PASSWORD` y
 `POSTGRES_DB` definidas en `ex00/.env`. No subas ese archivo a Git ni copies
 sus credenciales directamente en el código.
+
+### 📘 Guía Python paso a paso: [python.md](./python.md) <- Recomendable
 
 ### Opción alternativa: Script Bash + psql
 
@@ -191,7 +129,7 @@ También es válida. Puedes hacer un bucle `for` que recorra los CSV y ejecute `
 - [ ] El script encuentra solo todos los CSV de `customer/`
 - [ ] Crea una tabla por cada CSV
 - [ ] El nombre de cada tabla es el del archivo sin `.csv`
-- [ ] Se respetan las reglas de tipos de datos del ejercicio 02
+- [ ] Se respetan las reglas de tipos de datos del ejercicio ex02
 - [ ] No hay nombres de archivos hardcodeados
 - [ ] El archivo se llama `automatic_table.*`
 
