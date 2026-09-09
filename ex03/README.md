@@ -124,6 +124,12 @@ También es válida. Puedes hacer un bucle `for` que recorra los CSV y ejecute `
 
 ---
 
+<p align="center">
+  <img src="./imgs/diagrama_py.png" alt="Piscine Data Science – Module 0 – ex03 – diagrama de flujo del script" width="100%">
+</p>
+
+---
+
 ## ✅ Checklist de este ejercicio
 
 - [ ] El script encuentra solo todos los CSV de `customer/`

@@ -609,4 +609,4 @@ Antes de la corrección, comprueba:
 ---
 
 *Piscine Data Science – Module 0 – EX02 – Guía SQL*  
-*Referencia para el campus 42 – Septiembre de 2026*
+sternero – 42 Málaga – Septiembre de 2026*

@@ -1,7 +1,7 @@
 # 🐍 Guía Python – EX03 Automatic table
 
 <p align="center">
-  <img src="../imgs/banner_03.jpg" alt="Piscine Data Science – Module 0 – EX03 – Python" width="100%">
+  <img src="../imgs/banner_08_python.jpg" alt="Piscine Data Science – Module 0 – EX03 – Python" width="100%">
 </p>
 
 [← Volver al README de EX03](README.md) · [← README principal](../README.md)
@@ -40,12 +40,12 @@
 Para cualquier persona de la **Piscine Data Science** en 42 que:
 
 - vaya a hacer **EX03 – Automatic table**,
-- **no sepa programar en Python** (o sepa muy poco),
+- Tenga una pequeña **base de programación en Python** (o sepa muy poco),
 - necesite entender el archivo `automatic_table.py` línea a línea,
 - quiera una referencia clara, sin jerga innecesaria.
 
-No hace falta haber estudiado un curso de Python.  
-Sí hace falta tener **EX00** (PostgreSQL) funcionando y haber entendido la idea de **EX02** (una tabla desde un CSV).
+No hace falta haber estudiado un curso súper avanzado de Python.  
+Sí hace falta tener **ex00** y **ex02** (PostgreSQL) funcionando y haber entendido la idea de **ex02** (una tabla desde un CSV).
 
 [↑ Volver al índice](#-índice)
 
@@ -69,7 +69,7 @@ Al terminarla deberías poder:
 
 **Python** es un lenguaje de programación.
 
-Un **lenguaje de programación** es una forma de dar instrucciones a un ordenador con reglas claras.
+Y ya sabemos que un **lenguaje de programación** es una forma de dar instrucciones a un ordenador con reglas claras.
 
 Un **script** es un archivo de texto (aquí, `automatic_table.py`) con esas instrucciones en orden.
 
@@ -81,13 +81,13 @@ Analogía:
 | Cocinero | Intérprete `python3` |
 | Plato terminado | Tablas creadas en PostgreSQL |
 
-Cuando escribes:
+Y ya sabemos que cuando escribes:
 
 ```bash
 python3 automatic_table.py
 ```
 
-estás diciendo: *“Cocinero, sigue la receta de este archivo”*.
+estás diciendo algo así como: *“Cocinero, sigue la receta de este archivo”*.
 
 [↑ Volver al índice](#-índice)
 
@@ -123,20 +123,20 @@ Bash también es válido. En esta guía nos centramos en la versión **Python** 
 python3 automatic_table.py
 ```
 
-Opcional: pasar la ruta de `customer/` si no la encuentra solo:
+Opcional: **pasar la ruta** de `customer/` si no la encuentra solo:
 
 ```bash
 python3 automatic_table.py ../subject/customer
 ```
 
-También puedes hacer el archivo “ejecutable”:
+También puedes hacer el archivo <i><b> medio ejecutable</i></b>:
 
 ```bash
 chmod +x automatic_table.py
 ./automatic_table.py
 ```
 
-(eso funciona gracias a la primera línea del archivo: `#!/usr/bin/env python3`).
+Esto último funciona gracias a la primera línea del archivo: </i>**`#!/usr/bin/env python3`**.
 
 [↑ Volver al índice](#-índice)
 
@@ -144,7 +144,8 @@ chmod +x automatic_table.py
 
 ## 🧱 Ideas básicas del lenguaje
 
-No necesitas memorizar un manual. Con estas ideas basta para leer el script.
+No necesitas entender ni memorizar un completo manual de Python. <br>
+Con estas ideas basta para leer el script...
 
 ### Variable
 
@@ -551,62 +552,10 @@ Solución habitual:
 
 El flujo completo del script está resumido así:
 
-```text
-                    ┌─────────────────────┐
-                    │  Inicio del script  │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │ ensure_dependencies │
-                    │ ¿Faltan librerías?  │
-                    └──────────┬──────────┘
-                         sí │     │ no
-                    instalar│     │
-                         │  │     │
-                    ┌────▼──▼─────▼───────┐
-                    │ Importar psycopg2   │
-                    │ y dotenv            │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │ Cargar ex00/.env    │
-                    │ Preparar DB_CONFIG  │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │ main()              │
-                    │ find_customer_folder│
-                    └──────────┬──────────┘
-                               │
-                          ¿Existe?
-                         no │    │ sí
-                            │    │
-                       error│    │
-                            │    │
-                    ┌───────▼────▼────────┐
-                    │ glob("*.csv")       │
-                    │ ordenar lista       │
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │ ¿Hay algún CSV?     │
-                    └──────────┬──────────┘
-                         no │    │ sí
-                            │    │
-                       error│    │
-                            │    │
-              ┌─────────────▼────▼──────────────┐
-              │  PARA CADA csv_file:            │
-              │  create_table_from_csv          │
-              │    · stem → nombre tabla        │
-              │    · DROP + CREATE              │
-              │    · COPY (copy_expert)         │
-              └─────────────┬───────────────────┘
-                            │
-                    ┌───────▼────────┐
-                    │ Proceso OK     │
-                    │ Fin            │
-                    └────────────────┘
+<p align="center">
+  <img src="./imgs/diagrama_py.png" alt="Piscine Data Science – Module 0 – EX03 – Diagrama de Flujo Python" width="100%">
+</p>
+
 ```
 
 Hay también una **imagen** de este diagrama en el repositorio (ver carpeta `ex03/` o `imgs/`) para descargar e imprimir o adjuntar a notas.
@@ -649,4 +598,4 @@ Hay también una **imagen** de este diagrama en el repositorio (ver carpeta `ex0
 ---
 
 *Piscine Data Science – Module 0 – Guía Python EX03*  
-*Referencia didáctica genérica para el campus 42*
+sternero – 42 Málaga – Septiembre de 2026*
