@@ -129,14 +129,14 @@ Opcional: **pasar la ruta** de `customer/` si no la encuentra solo:
 python3 automatic_table.py ../subject/customer
 ```
 
-También puedes hacer el archivo <i><b> medio ejecutable</i></b>:
+También puedes hacer el archivo <i><b>medio ejecutable</b></i>:
 
 ```bash
 chmod +x automatic_table.py
 ./automatic_table.py
 ```
 
-Esto último funciona gracias a la primera línea del archivo: </i>**`#!/usr/bin/env python3`**.
+Esto último funciona gracias a la primera línea del archivo: **`#!/usr/bin/env python3`**.
 
 [↑ Volver al índice](#-índice)
 
@@ -555,8 +555,6 @@ El flujo completo del script está resumido así:
 <p align="center">
   <img src="./imgs/diagrama_py.png" alt="Piscine Data Science – Module 0 – EX03 – Diagrama de Flujo Python" width="100%">
 </p>
-
-```
 
 Hay también una **imagen** de este diagrama en el repositorio (ver carpeta `ex03/` o `imgs/`) para descargar e imprimir o adjuntar a notas.
 
