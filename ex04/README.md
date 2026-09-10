@@ -8,123 +8,327 @@
 
 ---
 
+## 📑 Índice
+
+1. [¿Qué se pide exactamente?](#-qué-se-pide-exactamente)
+2. [Archivos a entregar](#-archivos-a-entregar)
+3. [Explicación sencilla](#-explicación-sencilla)
+4. [Datos reales del ejercicio](#-datos-reales-del-ejercicio)
+5. [Cómo implementarlo](#-cómo-implementarlo)
+6. [Ejecutar el script paso a paso](#-ejecutar-el-script-paso-a-paso)
+7. [Comprobar el resultado](#-comprobar-el-resultado)
+8. [Errores frecuentes](#-errores-frecuentes)
+9. [Checklist](#-checklist-de-este-ejercicio)
+10. [Navegación](#-navegación)
+
+---
+
 ## 🎯 ¿Qué se pide exactamente?
 
-Crear una tabla llamada **`items`** a partir del archivo CSV que está en la carpeta `items/` (normalmente `item.csv` o `items.csv`).
+Crear una tabla llamada **`items`** a partir del CSV de productos del subject.
 
 ### Condiciones
 
 | Requisito | Detalle |
 |-----------|---------|
-| Nombre de la tabla | Exactamente **`items`** |
-| Nombres de columnas | Deben coincidir con los del CSV |
-| Tipos de datos | Al menos **3 tipos de datos diferentes** |
-| Tipos apropiados | Elige el tipo correcto para cada columna |
+| Archivo de origen | `item.csv` |
+| Tabla | Debe llamarse exactamente `items` |
+| Columnas | Deben coincidir con la cabecera del CSV |
+| Tipos | Al menos 3 tipos de datos diferentes y apropiados |
+| Entrega | `ex04/items_table.*` |
+
+[↑ Volver al índice](#-índice)
 
 ---
 
 ## 📁 Archivos a entregar
 
-Dentro de `ex04/` debes entregar un archivo llamado `items_table.*`  
-(puede ser `.sql`, `.py`, `.sh`…).
+Dentro de `ex04/`:
+
+```text
+items_table.*    # .sql, .py, .sh, …
+```
+
+En este repositorio se utiliza:
+
+| Archivo | Rol |
+|---------|-----|
+| [`items_table.sql`](./items_table.sql) | Elimina y crea la tabla `items` |
+
+La carga del CSV se ejecuta aparte con `COPY`, porque el archivo está en el host y PostgreSQL funciona dentro de Docker.
+
+[↑ Volver al índice](#-índice)
 
 ---
 
 ## 🧠 Explicación sencilla
 
-Hasta ahora has trabajado con los datos de **eventos de clientes** (compras, vistas, etc.).  
+En los ejercicios anteriores se crearon tablas con eventos de clientes. En EX04 se crea una tabla de catálogo: cada registro representa un producto y sus datos de categoría y marca.
 
-Este ejercicio crea la tabla de **productos / artículos**.  
+El flujo es:
 
-Es como crear la estantería donde se guardan las fichas de cada producto que vende la tienda (id, categoría, marca…).
+1. Localizar el CSV.
+2. Leer su cabecera para conocer las columnas.
+3. Crear la tabla `items` con tipos adecuados.
+4. Copiar el CSV al contenedor de PostgreSQL.
+5. Cargar sus filas con `COPY`.
+6. Comprobar la estructura y el número de registros.
+
+[↑ Volver al índice](#-índice)
 
 ---
 
-## 📂 Estructura esperada
+## 📂 Datos reales del ejercicio
 
-```
-./items/
-└── item.csv          (o items.csv)
+En este repositorio, el archivo se encuentra en:
+
+```text
+./subject/item/item.csv
 ```
 
-### Columnas reales del archivo `item.csv` (según el subject de este repo)
+La carpeta se llama `item` en singular. La cabecera real es:
 
-```
+```text
 product_id,category_id,category_code,brand
 ```
 
+Las primeras filas muestran que `category_code` y `brand` pueden estar vacíos:
+
+```text
+product_id,category_id,category_code,brand
+5712790,1487580005268456192,,f.o.x
+5764655,1487580005411062528,,cnd
+4958,1487580009471148032,,runail
+5848413,1487580007675986944,,freedecor
+```
+
+[↑ Volver al índice](#-índice)
+
 ---
 
-## 🚀 Cómo implementarlo paso a paso
+## 🚀 Cómo implementarlo
 
-### Paso 1: Mirar el CSV
+### Elección de tipos
 
-Las columnas son:
+| Columna | Tipo SQL | Motivo |
+|---------|----------|--------|
+| `product_id` | `INTEGER` | Sus valores caben en un entero estándar |
+| `category_id` | `BIGINT` | Puede contener números muy grandes |
+| `category_code` | `VARCHAR(255)` | Texto y puede estar vacío |
+| `brand` | `VARCHAR(100)` | Texto y puede estar vacío |
 
-- `product_id` → número grande → `BIGINT`
-- `category_id` → número grande → `BIGINT`
-- `category_code` → texto (puede estar vacío) → `VARCHAR(255)`
-- `brand` → texto (puede estar vacío) → `VARCHAR(100)`
+Estos campos utilizan tres tipos SQL apropiados: `INTEGER`, `BIGINT` y `VARCHAR`.
 
-Con estos 4 campos ya tienes **más de 3 tipos diferentes**.
+### Crear `items_table.sql`
 
-### Paso 2: Crear el script
-
-#### Opción A – SQL puro
-
-Crea el archivo `ex04/items_table.sql`:
+El archivo entregado contiene:
 
 ```sql
 DROP TABLE IF EXISTS items;
 
 CREATE TABLE items (
-    product_id      BIGINT,             -- 1
-    category_id     BIGINT,             -- 2
-    category_code   VARCHAR(255),       -- 3
-    brand           VARCHAR(100)        -- 4
+  product_id      INTEGER,
+  category_id     BIGINT,
+  category_code   VARCHAR(255),
+  brand           VARCHAR(100)
 );
-
--- Importación rápida
-COPY items
-FROM '/ruta/completa/al/archivo/item.csv'
-WITH (FORMAT csv, HEADER true);
 ```
 
-#### Opción B – Python
+La instrucción `COPY` se ejecuta después desde `/tmp/item.csv`, que es la ruta visible dentro del contenedor.
 
-Puedes reutilizar casi el mismo código del ejercicio 03, cambiando solo el nombre de la tabla y la ruta del CSV.
+### Alternativa Python
 
-### Paso 3: Ejecutar y verificar
+También sería válido crear un `items_table.py` reutilizando el patrón de EX03: conectar a PostgreSQL, crear la tabla `items` y cargar el CSV con `copy_expert`. Para este ejercicio, el SQL separado hace más visible cada etapa.
+
+[↑ Volver al índice](#-índice)
+
+---
+
+## ▶️ Ejecutar el script paso a paso
+
+### 1. Localizar el CSV
+
+Desde `data_science_0_creation_db/`:
 
 ```bash
-psql -U tu_login -d piscineds -h localhost -W -f items_table.sql
+find . -iname '*item*.csv' 2>/dev/null
 ```
 
-Dentro de `psql`:
+Resultado esperado:
+
+```text
+./subject/item/item.csv
+```
+
+Puedes comprobar la cabecera y algunas filas:
+
+```bash
+head -n 5 ./subject/item/item.csv
+```
+
+### 2. Crear la carpeta de EX04 (Si no lo está ya)
+
+```bash
+mkdir -p ex04
+```
+
+### 3. Comprobar que PostgreSQL está activo
+
+```bash
+docker ps | grep postgres_piscineds
+```
+
+Debe aparecer el contenedor `postgres_piscineds` en estado `Up`.
+
+### 4. Copiar los archivos al contenedor
+
+```bash
+docker cp ./subject/item/item.csv postgres_piscineds:/tmp/item.csv
+docker cp ./ex04/items_table.sql postgres_piscineds:/tmp/items_table.sql
+```
+
+En algunos entornos del campus aparece un aviso como este después de copiar:
+
+```text
+Error response from daemon: failed to Lchown ... invalid argument
+```
+
+Si antes aparece `Successfully copied`, el archivo se ha copiado correctamente. El aviso se debe a los permisos del entorno Docker; no impide continuar cuando los archivos existen dentro del contenedor.
+
+### 5. Crear la tabla
+
+```bash
+docker exec -it postgres_piscineds \
+  psql -U "$(whoami)" -d piscineds -W -f /tmp/items_table.sql
+```
+
+Salida normal en la primera ejecución:
+
+```text
+NOTICE:  table "items" does not exist, skipping
+DROP TABLE
+CREATE TABLE
+```
+
+El `NOTICE` no es un error: `DROP TABLE IF EXISTS` avisa de que todavía no había una tabla que borrar y después `CREATE TABLE` confirma que se ha creado.
+
+### 6. Cargar los datos
+
+```bash
+docker exec -it postgres_piscineds \
+  psql -U "$(whoami)" -d piscineds -W -c \
+  "COPY items FROM '/tmp/item.csv' WITH (FORMAT csv, HEADER true);"
+```
+
+Resultado obtenido con el CSV de este repositorio:
+
+```text
+COPY 109579
+```
+
+Esto significa que PostgreSQL ha insertado `109579` registros en `items`.
+
+[↑ Volver al índice](#-índice)
+
+---
+
+## ✅ Comprobar el resultado
+
+Abrir una sesión de PostgreSQL dentro del contenedor:
+
+```bash
+docker exec -it postgres_piscineds \
+  psql -U "$(whoami)" -d piscineds -W
+```
+
+Dentro de `psql`, ejecutar cada consulta por separado:
 
 ```sql
-\dt                          -- Debe aparecer la tabla "items"
-SELECT COUNT(*) FROM items;
-SELECT * FROM items LIMIT 10;
-\d items                     -- Ver la estructura
+\d items
 ```
+
+Debe aparecer una estructura equivalente a:
+
+```text
+Column        | Type
+--------------+------------------------
+product_id    | integer
+category_id   | bigint
+category_code | character varying(255)
+brand         | character varying(100)
+```
+
+Contar los registros:
+
+```sql
+SELECT COUNT(*) FROM items;
+```
+
+Resultado esperado:
+
+```text
+ count
+--------
+ 109579
+```
+
+Ver algunas filas:
+
+```sql
+SELECT * FROM items LIMIT 5;
+```
+
+Para salir:
+
+```sql
+\q
+```
+
+<p align="center">
+  <img src="./imgs/psql_02.png" alt="Vista de los comandos desde la terminal." width="100%">
+</p>
+
+#### La tabla también puede revisarse desde pgAdmin (ver EX01)...
+
+<p align="center">
+  <img src="./imgs/img_pgAdmin_08.png" alt="Captura de pgAdmin con las cuatro tablas incluidas + items_table" width="100%">
+</p>
+
+[↑ Volver al índice](#-índice)
+
+---
+
+## 🛠️ Errores frecuentes
+
+| Síntoma | Qué significa o qué hacer |
+|---------|---------------------------|
+| `find` devuelve `./subject/item/item.csv` | La carpeta correcta es `item`, en singular |
+| `head ./subject/items/item.csv` falla | La ruta contiene `items`, pero debe ser `item` |
+| `NOTICE: table "items" does not exist, skipping` | Mensaje normal de `DROP TABLE IF EXISTS` en la primera ejecución |
+| `failed to Lchown` después de `Successfully copied` | Aviso de permisos del campus; comprobar que el archivo está en `/tmp` y continuar |
+| `COPY 109579` | Carga correcta de 109579 registros |
+| `connection refused` | Arrancar PostgreSQL desde `ex00` con Docker Compose |
+| `invalid input syntax` | Revisar que las columnas y tipos coinciden con la cabecera del CSV |
+
+[↑ Volver al índice](#-índice)
 
 ---
 
 ## ✅ Checklist de este ejercicio
 
-- [ ] La tabla se llama exactamente `items`
-- [ ] Los nombres de las columnas coinciden con el CSV
-- [ ] Hay al menos 3 tipos de datos diferentes
-- [ ] Los datos se han importado correctamente
-- [ ] El archivo se llama `items_table.*`
+| Requisito | ¿Hecho? |
+|-----------|---------|
+| Se ha localizado el CSV real | ✅ |
+| La tabla se llama exactamente `items` | ✅ |
+| Los nombres de columnas coinciden con el CSV | ✅ |
+| Se han utilizado tipos apropiados | ✅ |
+| Hay al menos 3 tipos de datos diferentes | ✅ |
+| Los tipos de datos son apropiados para las columnas | ✅ |
+| Se han cargado los datos con `COPY` | ✅ |
+| `COUNT(*)` devuelve `109579` | ✅ |
+| Archivo `items_table.sql` preparado | ✅ |
 
----
-
-## 💡 Nota importante
-
-Algunas filas del CSV tienen campos vacíos (`category_code` o `brand`).  
-PostgreSQL los acepta sin problema si no pones `NOT NULL`.
+[↑ Volver al índice](#-índice)
 
 ---
 
@@ -134,5 +338,3 @@ PostgreSQL los acepta sin problema si no pones `NOT NULL`.
 - [← Ejercicio anterior: ex03](../ex03/README.md)
 
 ---
-
-*Piscine Data Science – sternero – 42 Málaga – Septiembre de 2026*
