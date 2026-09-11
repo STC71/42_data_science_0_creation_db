@@ -1,7 +1,7 @@
 -- EX04 – Tabla Items
 -- Subject: tabla "items", columnas del CSV, ≥ 3 tipos
 
--- DROP... borra si existe para poder reejecutar y no tener errores al reejecutar.
+-- DROP... borra si existe para poder reejecutar y no tener errores.
 DROP TABLE IF EXISTS items;
 
 CREATE TABLE items (

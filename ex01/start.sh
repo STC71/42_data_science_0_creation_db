@@ -373,6 +373,10 @@ start_pgadmin()
     local pgadmin_url="$PGADMIN_URL"
     local http_code=""
     local i=0
+    local progress_width=30
+    local progress_filled=0
+    local progress_empty=0
+    local progress_percent=0
 
     echo -e "${BLUE}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "${BLUE}${BOLD}🚀 Arrancar pgAdmin${RESET}"
@@ -438,8 +442,10 @@ start_pgadmin()
     while [[ $i -lt 20 ]]; do
         sleep 1
         http_code="$(curl -s -o /dev/null -w "%{http_code}" "$pgadmin_url" 2>/dev/null)"
+        i=$((i + 1))
 
         if [[ "$http_code" == "200" || "$http_code" == "302" ]]; then
+            printf '\r\033[K'
             echo -e "${GREEN}✓ pgAdmin se ha iniciado correctamente.${RESET}"
             echo -e "${GREEN}✓ Puerto 5050 respondiendo.${RESET}"
             echo "  URL: $pgadmin_url"
@@ -447,9 +453,15 @@ start_pgadmin()
             return 0
         fi
 
-        i=$((i + 1))
+        progress_filled=$((i * progress_width / 20))
+        progress_empty=$((progress_width - progress_filled))
+        progress_percent=$((i * 100 / 20))
+        printf '\r\033[K%sEsperando respuesta [%*s%*s] %3d%% (%d/20)%s' \
+            "$CYAN" "$progress_filled" '' "$progress_empty" '' \
+            "$progress_percent" "$i" "$RESET"
     done
 
+    printf '\n'
     echo -e "${RED}✗ pgAdmin no ha respondido después de 20 segundos.${RESET}"
     echo -e "${YELLOW}Puedes ejecutar la opción 3 para comprobar su estado.${RESET}"
     return 1
