@@ -25,10 +25,11 @@
 3. [Estructura y enlaces](#estructura)
 4. [Requisitos generales](#requisitos)
 5. [Orden de trabajo](#orden)
-6. [Asistentes start.sh](#asistentes)
-7. [Checklist final](#checklist)
-8. [Consejos](#consejos)
-9. [Recursos](#recursos)
+6. [Asistente global (`./start.sh`)](#asistente-global)
+7. [Asistentes por ejercicio (opcionales)](#asistentes-ex)
+8. [Checklist final](#checklist)
+9. [Consejos](#consejos)
+10. [Recursos útiles](#recursos)
 
 ---
 
@@ -66,15 +67,18 @@ Este **Module 0** se centra en la **creación y carga inicial** de la base `pisc
 <a id="estructura"></a>
 ## 📋 Estructura del proyecto y enlaces
 
-| Carpeta | Ejercicio | Qué entrega (mínimo) | README | Asistente |
-|---------|-----------|----------------------|--------|-----------|
-| [`ex00/`](ex00/README.md) | Create Postgres DB | Docker Compose + BD | [README](ex00/README.md) | [`start.sh`](ex00/start.sh) |
-| [`ex01/`](ex01/README.md) | Show me your DB | pgAdmin / GUI | [README](ex01/README.md) | [`start.sh`](ex01/start.sh) → EX00 |
+| Carpeta | Ejercicio | Qué entrega (mínimo) | README | Asistente local |
+|---------|-----------|----------------------|--------|-----------------|
+| [`ex00/`](ex00/README.md) | Create Postgres DB | Docker Compose + BD | [README](ex00/README.md) | [`start.sh`](ex00/start.sh) (opcional) |
+| [`ex01/`](ex01/README.md) | Show me your DB | pgAdmin / GUI | [README](ex01/README.md) | [`start.sh`](ex01/start.sh) (opcional) |
 | [`ex02/`](ex02/README.md) | First table | Tabla manual (CSV customer) | [README](ex02/README.md) | — |
-| [`ex03/`](ex03/README.md) | Automatic table | `automatic_table.*` | [README](ex03/README.md) | [`start.sh`](ex03/start.sh) → EX01 |
-| [`ex04/`](ex04/README.md) | Items table | `items_table.*` | [README](ex04/README.md) | [`start.sh`](ex04/start.sh) → EX03 |
+| [`ex03/`](ex03/README.md) | Automatic table | `automatic_table.*` | [README](ex03/README.md) | [`start.sh`](ex03/start.sh) (opcional) |
+| [`ex04/`](ex04/README.md) | Items table | `items_table.*` | [README](ex04/README.md) | [`start.sh`](ex04/start.sh) (opcional) |
+| **Raíz** | Module 0 completo | — | este archivo | **[`./start.sh`](./start.sh)** (recomendado) |
 
-### Datos descargables (debido a su tamaño los ficheros no están disponibles en este repo)
+### Datos descargables
+
+Debido a su tamaño, los CSV **no** suelen ir en el repo de entrega. En el layout de trabajo:
 
 ```text
 subject/
@@ -113,27 +117,90 @@ subject/
 4. **[ex03](ex03/README.md)** — Todas las tablas de `customer/` sin hardcodear nombres  
 5. **[ex04](ex04/README.md)** — Tabla `items` (≥ 3 tipos)
 
-Cadena de asistentes (opcional):
-
-```text
-ex04/start.sh → ex03/start.sh → ex01/start.sh → ex00/start.sh
-```
+Puedes seguir ese orden **a mano** o con el asistente global de la raíz (siguiente sección).
 
 [↑ Volver al índice](#indice)
 
 ---
 
-<a id="asistentes"></a>
-## 🎛️ Asistentes `start.sh`
+<a id="asistente-global"></a>
+## 🎛️ Asistente global (`./start.sh`)
 
-No sustituyen a los archivos del subject; facilitan entorno, carga y comprobación.
+En la **raíz** del proyecto hay un único orquestador:
 
-| Script | Llamable desde cualquier ruta | Encadena a |
-|--------|-------------------------------|------------|
-| `ex00/start.sh` | Sí | — (Docker + `.env` + contenedor) |
-| `ex01/start.sh` | Sí | EX00 |
-| `ex03/start.sh` | Sí | EX01 → EX00 + `automatic_table.py` |
-| `ex04/start.sh` | Sí | EX03 / EX01 + carga `items` (SQL o Python) |
+```bash
+chmod +x start.sh
+./start.sh
+# o desde cualquier directorio (recomendable para GIT):
+/ruta/a/data_science_0_creation_db/start.sh
+```
+
+### Independiente de los `start.sh` de cada `ex/`
+
+- **No exige** `ex00/start.sh`, `ex01/start.sh`, `ex03/start.sh` ni `ex04/start.sh`.
+- Incluye el flujo de Module 0: estado del entorno, `.env`, levantar PostgreSQL, cargas EX02/EX03/EX04, `psql`, checklist de entregables.
+- Si existen los asistentes por ejercicio, el menú ofrece **atajos opcionales** (no obligatorios).
+- Podemos trabajar solo con **entregables del subject + este `start.sh`**.
+
+### Permisos de ejecución (`+x`)
+
+Tras un `git clone`, a veces faltan permisos y aparece `Permission denied`.
+
+El asistente global:
+
+1. Puede aplicar **`chmod +x`** a scripts conocidos al arrancar (con confirmación).  
+2. Opción de menú dedicada a permisos.  
+3. Al preparar la carpeta de evaluación, vuelve a aplicar `+x` allí.
+
+Para que el **remoto y los clones futuros** conserven el bit ejecutable:
+
+```bash
+git update-index --chmod=+x start.sh                # no necesario para evaluación
+git update-index --chmod=+x ex03/automatic_table.py
+git update-index --chmod=+x ex04/items_table.py     # si procede en lugar del .sql
+# (y el resto de scripts que deban ser ejecutables)
+git commit -m "Mark delivery scripts as executable"
+```
+
+Eso también está guiado en el menú de **Git asistido** del `./start.sh`.
+
+### Modo evaluación: `repo_<login>`
+
+Opción del menú para crear una carpeta limpia de entrega (nombre por defecto `repo_$(whoami)`, editable):
+
+| Se copia (lista blanca) | No se copia |
+|-------------------------|-------------|
+| `ex00/docker-compose.yml` | `.env` (secretos) |
+| `ex02/table.sql` | `subject/` (CSV pesados) |
+| `ex03/automatic_table.*` | venv / logs / cachés |
+| `ex04/items_table.*` | capturas opcionales salvo que las añadas tú |
+| README útiles + este `start.sh` | — |
+
+Todo con confirmación paso a paso. **Git push solo si lo autorizas** (por defecto no).
+
+[↑ Volver al índice](#indice)
+
+---
+
+<a id="asistentes-ex"></a>
+## 🧩 Asistentes por ejercicio (opcionales)
+
+No sustituyen a los archivos del subject. Son comodidad extra si los tienes en el repo de trabajo.
+
+| Script | Rol |
+|--------|-----|
+| [`ex00/start.sh`](ex00/start.sh) | Docker, `.env`, contenedor |
+| [`ex01/start.sh`](ex01/start.sh) | pgAdmin + cadena hacia EX00 |
+| [`ex03/start.sh`](ex03/start.sh) | `automatic_table.py` + comprobaciones |
+| [`ex04/start.sh`](ex04/start.sh) | Carga `items` (SQL o Python) |
+
+Cadena opcional entre ellos:
+
+```text
+ex04/start.sh → ex03/start.sh → ex01/start.sh → ex00/start.sh
+```
+
+Si no los usas, el **[`./start.sh`](./start.sh) de la raíz** cubre el recorrido.
 
 [↑ Volver al índice](#indice)
 
@@ -150,6 +217,7 @@ No sustituyen a los archivos del subject; facilitan entorno, carga y comprobaci�
 | EX03: todas las tablas de `customer/` sin nombres hardcodeados | ☐ |
 | EX04: tabla `items` con ≥ 3 tipos y datos cargados | ☐ |
 | Nombres de carpetas y archivos **exactos** | ☐ |
+| Scripts ejecutables marcados en Git (`update-index --chmod=+x`) si aplica | ☐ |
 | Todo en el repositorio Git | ☐ |
 | Puedes demostrar el flujo en evaluación | ☐ |
 
@@ -164,7 +232,8 @@ No sustituyen a los archivos del subject; facilitan entorno, carga y comprobaci�
 2. Mira la cabecera real del CSV antes de elegir tipos (`category_id` → `BIGINT`).  
 3. Rutas relativas o argumentos CLI; evita `/sgoinfre/students/tu_login/...` fijo en el código.  
 4. Documenta scripts (comentarios claros).  
-5. Prueba desde cero antes de la evaluación (`docker-compose down -v` ⚠️ solo si aceptas perder datos).
+5. Prueba desde cero antes de la evaluación (`docker-compose down -v` ⚠️ solo si aceptas perder datos).  
+6. Tras clonar, si falla `./script`: `chmod +x` o el menú de permisos del `start.sh` raíz.
 
 [↑ Volver al índice](#indice)
 
@@ -173,10 +242,25 @@ No sustituyen a los archivos del subject; facilitan entorno, carga y comprobaci�
 <a id="recursos"></a>
 ## 📚 Recursos útiles
 
+### Documentación externa
+
 - [PostgreSQL – tipos de datos](https://www.postgresql.org/docs/current/datatype.html)  
 - [COPY](https://www.postgresql.org/docs/current/sql-copy.html)  
 - [Imagen Docker postgres](https://hub.docker.com/_/postgres)  
-- Guías del repo: `ex00/docker.md`, `ex00/postgresql.md`, `ex02/SQL.md`, `ex03/python.md`
+
+### Guías educativas de este repositorio
+
+| Guía | Carpeta | Contenido |
+|------|---------|-----------|
+| [`docker.md`](ex00/docker.md) | EX00 | Docker / Compose “bajo el capó”, volúmenes, puertos |
+| [`postgresql.md`](ex00/postgresql.md) | EX00 | PostgreSQL y `psql` orientados a la piscine |
+| [`pgAdmin.md`](ex01/pgAdmin.md) | EX01 | Instalar y conectar pgAdmin sin sudo (cluster 42) |
+| [`SQL.md`](ex02/SQL.md) | EX02 | SQL desde cero: tablas, tipos, `COPY` |
+| [`python.md`](ex03/python.md) | EX03 | Python del `automatic_table.py` paso a paso |
+
+Los **README** de cada `ex00`…`ex04` detallan el subject y la ejecución de ese ejercicio.
+
+[↑ Volver al índice](#indice)
 
 ---
 
