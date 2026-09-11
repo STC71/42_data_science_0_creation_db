@@ -74,7 +74,7 @@ Este **Module 0** se centra en la **creación y carga inicial** de la base `pisc
 | [`ex03/`](ex03/README.md) | Automatic table | `automatic_table.*` | [README](ex03/README.md) | [`start.sh`](ex03/start.sh) → EX01 |
 | [`ex04/`](ex04/README.md) | Items table | `items_table.*` | [README](ex04/README.md) | [`start.sh`](ex04/start.sh) → EX03 |
 
-### Datos del subject (en este repo)
+### Datos descargables (debido a su tamaño los ficheros no están disponibles en este repo)
 
 ```text
 subject/
@@ -164,7 +164,7 @@ No sustituyen a los archivos del subject; facilitan entorno, carga y comprobaci�
 2. Mira la cabecera real del CSV antes de elegir tipos (`category_id` → `BIGINT`).  
 3. Rutas relativas o argumentos CLI; evita `/sgoinfre/students/tu_login/...` fijo en el código.  
 4. Documenta scripts (comentarios claros).  
-5. Prueba desde cero antes de la evaluación (`docker-compose down -v` solo si aceptas perder datos).
+5. Prueba desde cero antes de la evaluación (`docker-compose down -v` ⚠️ solo si aceptas perder datos).
 
 [↑ Volver al índice](#indice)
 
