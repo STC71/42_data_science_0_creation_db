@@ -233,7 +233,7 @@ Si no los usas, el **[`./start.sh`](./start.sh) de la raíz** cubre el recorrido
 3. Rutas relativas o argumentos CLI; evita `/sgoinfre/students/tu_login/...` fijo en el código.  
 4. Documenta scripts (comentarios claros).  
 5. Prueba desde cero antes de la evaluación (`docker-compose down -v` ⚠️ solo si aceptas perder datos).  
-6. Tras clonar, si falla `./script`: `chmod +x` o el menú de permisos del `start.sh` raíz.
+6. Tras clonar, si falla `./«script»`: `chmod +x «script»` o ejecuta el menú de permisos del `start.sh` raíz.
 
 [↑ Volver al índice](#indice)
 
