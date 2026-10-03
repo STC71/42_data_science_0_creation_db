@@ -5,6 +5,7 @@
 # ==============================================================================
 
 # version: '3.8'
+# (La clave "version" está obsoleta en Compose V2; Docker la ignora si se deja.)
 
 # Aquí empieza la lista de todos los elementos o "servicios" que vamos a construir.
 services:
@@ -27,6 +28,7 @@ services:
 
       # El nombre del administrador principal (el dueño de la base de datos, o sea: tu login). 
       # ¡RECUERDA reemplazar el login por tu usuario real de 42 (ej: jsmith)!
+      # En la práctica usamos .env → POSTGRES_USER=$(id -un)
       POSTGRES_USER: ${POSTGRES_USER}
       
       # La contraseña secreta que te pedirá el comando 'psql' cuando intentes conectarte.
@@ -55,6 +57,22 @@ services:
     # Así, aunque apagues la Equipo, tus tablas y progresos de la Piscine nunca se borrarán.
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    # ---------------------------------------------------------------------------
+    # RED (networks) — OBLIGATORIO en la escala de evaluación del Module 0
+    # ---------------------------------------------------------------------------
+    # Metáfora: la "calle" por la que el contenedor habla con otros servicios Docker.
+    #
+    # La escala Intra exige que en docker-compose.yml aparezca la clave networks.
+    # NO uses el modo host de red (prohibido en la evaluación) (está prohibido en la evaluación).
+    # NO uses "links:" (también prohibido).
+    #
+    # Aquí el servicio postgres se une a una red bridge propia llamada piscineds_net.
+    # Compose la crea al hacer "up" y aísla el contenedor de la red host de forma segura,
+    # mientras el mapeo ports: "5432:5432" sigue permitiendo conectar desde tu máquina
+    # (psql, pgAdmin) a localhost:5432.
+    networks:
+      - piscineds_net
       
     # Es la regla de supervivencia del contenedor. Le dice a tu Equipo que si el sistema
     # de bases de datos se llega a apagar por un error físico o si reinicias el equipo, 
@@ -67,3 +85,11 @@ services:
 # mis cosas importantes", o sea lo que está dentro de la base de datos.
 volumes:
   postgres_data:
+
+# Declaración de la red virtual (la "calle" piscineds_net).
+# driver: bridge = red interna de Docker por defecto, adecuada para un solo servicio
+# expuesto al host solo mediante "ports".
+# Sin este bloque, la escala de evaluación puede dar la defensa por terminada.
+networks:
+  piscineds_net:
+    driver: bridge
