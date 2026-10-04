@@ -340,6 +340,149 @@ check_structure() {
   fi
 }
 
+check_subject_data() {
+  section "1a · Datos del subject – CSV necesarios para la evaluación"
+  ctx "Después de clonar el repositorio preparado para la evaluación, descarga el archivo comprimido subject y descomprímelo en esta raíz."
+  ctx "La carpeta subject/ debe quedar junto a ex00/, ex01/, ex02/, ex03/ y ex04/; no dentro de ningún ejercicio."
+  show_cmd "unzip /ruta/a/subject.zip -d \"$SCRIPT_DIR\""
+  ctx "Estos CSV son necesarios para cargar y comprobar EX02 y EX04. EX03 usa además el eval.zip de Attachments de Intra."
+  ctx_blank
+
+  local subject_dir="$SCRIPT_DIR/subject"
+  local customer_dir="$subject_dir/customer"
+  local item_csv="$subject_dir/item/item.csv"
+  local csv_count=0
+
+  subsection "Ubicación de subject/"
+  if [[ -d "$subject_dir" ]]; then
+    ok "Encontrado: $subject_dir"
+  else
+    fail "No se encontró subject/ junto a ex00/…/ex04"
+    note "Descarga el comprimido subject y descomprímelo en la raíz del repositorio clonado antes de continuar"
+    RESULT["subject"]="no"
+    return 0
+  fi
+
+  subsection "CSV disponibles"
+  if [[ -d "$customer_dir" ]]; then
+    local customer_count
+    customer_count=$(find "$customer_dir" -maxdepth 1 -type f -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
+    csv_count=$((csv_count + customer_count))
+    ok "customer/: $customer_count CSV"
+    find "$customer_dir" -maxdepth 1 -type f -name '*.csv' -printf '      %f\n' 2>/dev/null | sort
+  else
+    fail "Falta subject/customer/ (CSV de EX02/EX03)"
+  fi
+
+  if [[ -f "$item_csv" ]]; then
+    ((csv_count++)) || true
+    ok "Encontrado subject/item/item.csv"
+  else
+    fail "Falta subject/item/item.csv (CSV de EX04)"
+  fi
+
+  if [[ "$csv_count" -gt 0 && -d "$customer_dir" && -f "$item_csv" ]]; then
+    RESULT["subject"]="yes"
+    ok "subject/ está preparado para la evaluación ($csv_count CSV contabilizados)"
+  else
+    RESULT["subject"]="no"
+    fail "subject/ está incompleto: no se puede garantizar la carga de los datos"
+  fi
+}
+
+check_existing_runtime() {
+  section "1b · Preflight del entorno Docker"
+  ctx "Antes de la evaluación real se comprueba si ya hay contenedores del proyecto y si la BD contiene tablas o datos de una ejecución anterior."
+  ctx "La limpieza nunca es automática: primero se muestran las consultas y el comando de eliminación, y solo se ejecuta con confirmación explícita."
+  ctx_blank
+
+  if ! command -v docker >/dev/null 2>&1; then
+    warn "docker no está disponible; no se puede inspeccionar el entorno"
+    return 0
+  fi
+
+  subsection "Contenedores existentes"
+  show_cmd "docker ps -a --format 'table {{.Names}}\\t{{.Status}}\\t{{.Image}}'"
+  local containers
+  containers="$(docker ps -a --format '{{.Names}}' 2>/dev/null | grep -iE 'postgres|piscine' || true)"
+  if [[ -z "$containers" ]]; then
+    ok "No se encontraron contenedores Postgres/piscine existentes"
+    return 0
+  fi
+  echo "$containers" | sed 's/^/      /'
+
+  local has_data=false cname login
+  login="$(pg_login)"
+  while IFS= read -r cname; do
+    [[ -n "$cname" ]] || continue
+    subsection "Consulta de datos: $cname"
+    if ! docker inspect -f '{{.State.Running}}' "$cname" 2>/dev/null | grep -q '^true$'; then
+      info "$cname está detenido; no se puede consultar PostgreSQL sin arrancarlo"
+      continue
+    fi
+    show_cmd "docker exec \"$cname\" psql -U $login -d piscineds -Atc \"SELECT count(*) FROM pg_tables WHERE schemaname = 'public'; SELECT coalesce(sum(n_live_tup), 0) FROM pg_stat_user_tables;\""
+    local db_probe
+    db_probe="$(
+      docker exec "$cname" psql -U "$login" -d piscineds -Atc \
+        "SELECT count(*) FROM pg_tables WHERE schemaname = 'public'; SELECT coalesce(sum(n_live_tup), 0) FROM pg_stat_user_tables;" \
+        2>/dev/null || true
+    )"
+    if [[ -n "$db_probe" ]]; then
+      echo "$db_probe" | sed 's/^/      /'
+      if echo "$db_probe" | awk 'NF && $1 > 0 { found=1 } END { exit(found ? 0 : 1) }'; then
+        has_data=true
+        warn "$cname parece contener tablas o datos de una ejecución anterior"
+      else
+        ok "$cname responde y no muestra tablas/datos de usuario"
+      fi
+    else
+      warn "No se pudo consultar piscineds en $cname (usuario o BD distintos)"
+    fi
+  done <<< "$containers"
+
+  if [[ "$has_data" != true ]]; then
+    return 0
+  fi
+
+  subsection "Propuesta de limpieza"
+  local compose_file="" compose_bin=""
+  for compose_file in "$SCRIPT_DIR/ex00/docker-compose.yml" \
+                      "$SCRIPT_DIR/ex00/docker-compose.yaml" \
+                      "$SCRIPT_DIR/docker-compose.yml"; do
+    [[ -f "$compose_file" ]] && break
+    compose_file=""
+  done
+  if [[ -z "$compose_file" ]]; then
+    warn "Hay datos previos, pero no se encontró docker-compose.yml para proponer una limpieza segura"
+    return 0
+  fi
+  if docker compose version >/dev/null 2>&1; then
+    compose_bin="docker compose"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    compose_bin="docker-compose"
+  else
+    warn "Hay datos previos, pero no se encontró Docker Compose para limpiarlos"
+    return 0
+  fi
+
+  local compose_dir
+  compose_dir="$(dirname "$compose_file")"
+  show_cmd "cd \"$compose_dir\" && $compose_bin down -v"
+  echo -e "  ${YELLOW}${BOLD}Esto detendrá y eliminará los contenedores y volúmenes del Compose, incluidos los datos cargados.${RESET}"
+  read -r -p "  ¿Quieres eliminar este entorno antes de iniciar la evaluación? [s/N] → " answer
+  if [[ ! "${answer:-}" =~ ^[sSyY]$ ]]; then
+    info "No se eliminó nada; la evaluación continuará con el entorno existente"
+    return 0
+  fi
+
+  info "Ejecutando la limpieza confirmada…"
+  if (cd "$compose_dir" && $compose_bin down -v); then
+    ok "Entorno Docker eliminado; la evaluación podrá empezar desde cero"
+  else
+    fail "No se pudo completar la limpieza de Docker"
+  fi
+}
+
 check_docker_compose_rules() {
   section "1b · docker-compose.yml (reglas que CIERRAN la evaluación)"
   ctx "Docker Compose describe servicios (p. ej. PostgreSQL) en un YAML."
@@ -936,6 +1079,7 @@ summary() {
   ctx_blank
   echo -e "  ${BOLD}Checklist hoja de evaluación${RESET}"
   echo -e "  ─────────────────────────────────────"
+  printf "  %-12s %s\n" "subject/ CSV" "${RESULT[subject]:-—}"
   printf "  %-12s %s\n" "Ex00" "${RESULT[ex00]:-—}"
   printf "  %-12s %s\n" "Ex01" "${RESULT[ex01]:-—}"
   printf "  %-12s %s\n" "Ex02" "${RESULT[ex02]:-—}"
@@ -949,6 +1093,24 @@ summary() {
   if [[ "$STOP_EVAL" == true ]]; then
     echo -e "  ${RED}${BOLD}Se marcó parada anticipada (Ex01 / reglas Docker).${RESET}"
   fi
+  echo
+  if [[ "${RESULT[subject]:-}" == "yes" \
+        && "${RESULT[ex00]:-}" == "yes" \
+        && "${RESULT[ex01]:-}" == "yes" \
+        && "${RESULT[ex02]:-}" == "yes" \
+        && "${RESULT[ex03]:-}" == "yes" \
+        && "${RESULT[ex03_five]:-}" == "yes" \
+        && "${RESULT[ex03_types]:-}" == "yes" \
+        && "${RESULT[ex04]:-}" == "yes" \
+        && "$STOP_EVAL" != true \
+        && "$FAIL_COUNT" -eq 0 ]]; then
+    echo -e "  ${GREEN}${BOLD}✅ RESULTADO FINAL: EVALUACIÓN SUPERADA${RESET}"
+    echo -e "  ${GREEN}Todos los veredictos registrados son favorables y no hay fallos automáticos.${RESET}"
+  else
+    echo -e "  ${RED}${BOLD}❌ RESULTADO FINAL: EVALUACIÓN NO SUPERADA${RESET}"
+    echo -e "  ${RED}Hay algún veredicto desfavorable, datos subject incompletos, una parada anticipada o fallos automáticos.${RESET}"
+  fi
+  echo -e "  ${DIM}Este resultado es orientativo; la decisión oficial corresponde al evaluador y a la hoja de evaluación.${RESET}"
   echo
   echo -e "  ${BOLD}Ratings (hoja de evaluación):${RESET} Ok · Outstanding · Empty · Incomplete · Cheat · Crash · Concern · Forbidden"
   echo
@@ -967,6 +1129,8 @@ main() {
   [[ "$STOP_EVAL" == true ]] && summary && exit 0
 
   check_structure
+  check_subject_data
+  check_existing_runtime
   check_docker_compose_rules || true
   [[ "$STOP_EVAL" == true ]] && summary && exit 0
   check_dockerfile_rules || true

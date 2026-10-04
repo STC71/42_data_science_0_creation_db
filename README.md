@@ -27,9 +27,10 @@
 5. [Orden de trabajo](#orden)
 6. [Asistente global (`./start.sh`)](#asistente-global)
 7. [Asistentes por ejercicio (opcionales)](#asistentes-ex)
-8. [Checklist final](#checklist)
-9. [Consejos](#consejos)
-10. [Recursos útiles](#recursos)
+8. [Guía de evaluación (`evaluation.sh`)](#evaluation)
+9. [Checklist final](#checklist)
+10. [Consejos](#consejos)
+11. [Recursos útiles](#recursos)
 
 ---
 
@@ -206,11 +207,83 @@ Si no los usas, el **[`./start.sh`](./start.sh) de la raíz** cubre el recorrido
 
 ---
 
+<a id="evaluation"></a>
+## 🧪 Guía de evaluación (`evaluation.sh`)
+
+El script [`evaluation.sh`](./evaluation.sh) es una guía interactiva para preparar
+y simular la defensa del Module 0. Automatiza comprobaciones de estructura y
+Docker, y muestra los comandos necesarios para revisar los ejercicios.
+
+No sustituye la hoja oficial de evaluación, no modifica los entregables y **no
+es un entregable puntuable**. Ejecútalo desde la raíz de este módulo:
+
+```bash
+chmod +x evaluation.sh
+./evaluation.sh
+```
+
+### Preparar los CSV para la evaluación
+
+La carpeta `subject/` normalmente no forma parte del repositorio clonado
+porque contiene los CSV pesados. Por tanto, después de clonar el repositorio
+preparado para la evaluación, descarga también el archivo comprimido `subject`
+desde la plataforma indicada para la piscine y descomprímelo en la raíz del
+módulo, junto a `ex00/`…`ex04/`.
+
+Por ejemplo, si el archivo descargado se llama `subject.zip`:
+
+```bash
+cd /ruta/a/repo_<login>    # raíz del repositorio preparado para la evaluación
+unzip /ruta/a/subject.zip
+```
+
+Antes de empezar la evaluación, la estructura debe quedar así:
+
+```text
+data_science_0_creation_db/
+├── subject/
+│   ├── customer/
+│   │   ├── data_2022_oct.csv
+│   │   ├── data_2022_nov.csv
+│   │   ├── data_2022_dec.csv
+│   │   └── data_2023_jan.csv
+│   └── item/
+│       └── item.csv
+├── ex00/
+├── ex01/
+├── ex02/
+├── ex03/
+└── ex04/
+```
+
+No coloques `subject/` dentro de un ejercicio ni dentro de la carpeta de
+entrega del repositorio: debe ser una carpeta hermana de `ex00/`…`ex04/` en la
+carpeta de trabajo utilizada durante la evaluación.
+
+Al comenzar, `evaluation.sh` comprueba esta ubicación y muestra los CSV
+encontrados. Si falta `subject/` o está incompleto, lo señala en rojo y el
+resultado final no se considera satisfactorio hasta que se prepare
+correctamente.
+
+Antes de iniciar las comprobaciones de los ejercicios, también inspecciona los
+contenedores Docker relacionados con PostgreSQL/piscine y consulta si la base
+`piscineds` ya contiene tablas o datos de una ejecución anterior. Si detecta
+datos previos, muestra la consulta y propone el comando
+`docker compose down -v` (o `docker-compose down -v`) para empezar desde cero.
+La eliminación de contenedores y volúmenes **nunca es automática**: solo se
+ejecuta después de una confirmación explícita; si se rechaza, la evaluación
+continúa con el entorno existente.
+
+[↑ Volver al índice](#indice)
+
+---
+
 <a id="checklist"></a>
 ## ✅ Checklist final antes de entregar
 
 | Ítem | ☐ |
 |------|---|
+| Carpeta `subject/` descargada y descomprimida junto a `ex00/`…`ex04/` para la evaluación | ☐ |
 | EX00: BD accesible con usuario / `mysecretpassword` / `piscineds` | ☐ |
 | EX01: se puede visualizar la BD | ☐ |
 | EX02: tabla con ≥ 6 tipos y DATETIME/TIMESTAMPTZ primero | ☐ |
