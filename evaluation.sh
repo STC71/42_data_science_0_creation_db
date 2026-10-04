@@ -45,6 +45,8 @@ PASS_COUNT=0
 FAIL_COUNT=0
 WARN_COUNT=0
 STOP_EVAL=false   # true si la hoja de evaluación dice "evaluation ends / stops here"
+LAST_RESULT_KIND="info"
+LAST_RESULT_TEXT="Evaluación iniciada"
 
 # ============================================================================
 # SALIDA
@@ -74,9 +76,24 @@ subsection() {
   echo -e "  ${MAGENTA}├─ $1${RESET}"
 }
 
-ok()   { echo -e "    ${GREEN}✓${RESET} $1"; ((PASS_COUNT++)) || true; }
-fail() { echo -e "    ${RED}✗${RESET} $1"; ((FAIL_COUNT++)) || true; }
-warn() { echo -e "    ${YELLOW}⚠${RESET} $1"; ((WARN_COUNT++)) || true; }
+ok() {
+  LAST_RESULT_KIND="success"
+  LAST_RESULT_TEXT="$1"
+  echo -e "    ${GREEN}✓${RESET} $1"
+  ((PASS_COUNT++)) || true
+}
+fail() {
+  LAST_RESULT_KIND="error"
+  LAST_RESULT_TEXT="$1"
+  echo -e "    ${RED}✗${RESET} $1"
+  ((FAIL_COUNT++)) || true
+}
+warn() {
+  LAST_RESULT_KIND="warning"
+  LAST_RESULT_TEXT="$1"
+  echo -e "    ${YELLOW}⚠${RESET} $1"
+  ((WARN_COUNT++)) || true
+}
 info() { echo -e "    ${CYAN}ℹ${RESET} $1"; }
 note() { echo -e "    ${DIM}→ $1${RESET}"; }
 show_cmd() { echo -e "    ${DIM}${BOLD}\$${RESET} ${YELLOW}$1${RESET}"; }
@@ -86,9 +103,38 @@ ctx() {
 }
 ctx_blank() { echo; echo; }
 
+show_last_result() {
+  case "$LAST_RESULT_KIND" in
+    success)
+      echo -e "  ${GREEN}${BOLD}✅ Último resultado: éxito${RESET}"
+      echo -e "  ${GREEN}${LAST_RESULT_TEXT}${RESET}"
+      ;;
+    error)
+      echo -e "  ${RED}${BOLD}❌ Último resultado: error${RESET}"
+      echo -e "  ${RED}${LAST_RESULT_TEXT}${RESET}"
+      ;;
+    warning)
+      echo -e "  ${YELLOW}${BOLD}⚠ Último resultado: advertencia${RESET}"
+      echo -e "  ${YELLOW}${LAST_RESULT_TEXT}${RESET}"
+      ;;
+    *)
+      echo -e "  ${CYAN}${BOLD}ℹ Último resultado${RESET}"
+      echo -e "  ${CYAN}${LAST_RESULT_TEXT}${RESET}"
+      ;;
+  esac
+  echo -e "  ${DIM}Comprobaciones acumuladas: OK=$PASS_COUNT · Error=$FAIL_COUNT · Avisos=$WARN_COUNT${RESET}"
+  echo
+}
+
+redraw_after_continue() {
+  header
+  show_last_result
+}
+
 pause() {
   echo
   read -r -p "$(echo -e "${CYAN}Pulsa Enter para continuar…${RESET}")"
+  redraw_after_continue
 }
 
 ask_yes_no() {
@@ -266,6 +312,7 @@ wait_confirm() {
   local msg="${1:-Cuando hayáis terminado este paso (comandos de arriba o GUI)}"
   echo
   read -r -p "$(echo -e "${CYAN}${msg}. Enter para seguir…${RESET}")"
+  redraw_after_continue
 }
 
 # ============================================================================

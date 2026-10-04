@@ -274,6 +274,12 @@ La eliminación de contenedores y volúmenes **nunca es automática**: solo se
 ejecuta después de una confirmación explícita; si se rechaza, la evaluación
 continúa con el entorno existente.
 
+Después de cada pausa con el mensaje «Pulsa Enter para continuar» o «Enter para
+seguir», la terminal se limpia y se vuelve a mostrar la cabecera junto con el
+resultado del paso anterior, usando ✅ verde para éxito, ❌ rojo para error o ⚠
+amarillo para advertencia. También se conservan los contadores acumulados de
+comprobaciones.
+
 [↑ Volver al índice](#indice)
 
 ---
