@@ -281,7 +281,7 @@ amarillo para advertencia. También se conservan los contadores acumulados de
 comprobaciones.
 
 El preflight comprueba además si pgAdmin responde en
-`http://127.0.0.1:5050`, necesario para mostrar EX01 y revisar visualmente la
+`http://localhost:5050`, necesario para mostrar EX01 y revisar visualmente la
 base de datos. Si no responde y existe una instalación válida, pregunta si
 debe arrancarlo, muestra el comando utilizado y verifica después el código HTTP.
 Si no está instalado o el arranque falla, indica los comandos siguientes y el

@@ -17,7 +17,7 @@
 #  Cada bloque explica contexto (hoja de evaluación), muestra comandos copiables y pide s/n.
 #  Este fichero NO es entregable ni puntúa: solo guía de defensa.
 #
-#  sternero – 42 Málaga – 2026
+#  sternero – 42 Málaga – Octubre 2026
 ###############################################################################
 
 set -u
@@ -233,7 +233,7 @@ show_manual_sql() {
   note "Paso 4 – Comprobar resultado:"
   show_cmd "docker exec -it $cname psql -U $login -d piscineds -c '\\dt'"
   show_cmd "docker exec -it $cname psql -U $login -d piscineds -c '\\d nombre_de_la_tabla'"
-  note "O pgAdmin en el navegador: http://127.0.0.1:5050"
+  note "O pgAdmin en el navegador: http://localhost:5050"
 }
 
 show_manual_python() {
@@ -262,7 +262,7 @@ show_manual_python() {
   echo
   note "Paso 3 – Comprobar tablas:"
   show_cmd "docker exec -it postgres_piscineds psql -U $login -d piscineds -c '\\dt'"
-  note "O pgAdmin: http://127.0.0.1:5050"
+  note "O pgAdmin: http://localhost:5050"
 }
 
 try_run_sql() {
@@ -533,13 +533,13 @@ check_existing_runtime() {
 check_pgadmin_runtime() {
   section "1c · Preflight de pgAdmin"
   ctx "EX01 requiere mostrar la base de datos mediante una interfaz gráfica durante la evaluación."
-  ctx "Se comprobará pgAdmin en http://127.0.0.1:5050. Si no responde, podrás arrancarlo sin cerrar esta terminal."
+  ctx "Se comprobará pgAdmin en http://localhost:5050. Si no responde, podrás arrancarlo sin cerrar esta terminal."
   ctx_blank
 
   local pgadmin_dir="$HOME/sgoinfre/pgadmin4"
   local pgadmin_exec="$pgadmin_dir/venv/bin/pgadmin4"
   local pgadmin_config="$pgadmin_dir/config"
-  local pgadmin_url="http://127.0.0.1:5050"
+  local pgadmin_url="http://localhost:5050"
   local http_code=""
 
   subsection "Comprobar respuesta HTTP"
