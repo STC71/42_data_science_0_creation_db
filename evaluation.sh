@@ -530,6 +530,85 @@ check_existing_runtime() {
   fi
 }
 
+check_pgadmin_runtime() {
+  section "1c · Preflight de pgAdmin"
+  ctx "EX01 requiere mostrar la base de datos mediante una interfaz gráfica durante la evaluación."
+  ctx "Se comprobará pgAdmin en http://127.0.0.1:5050. Si no responde, podrás arrancarlo sin cerrar esta terminal."
+  ctx_blank
+
+  local pgadmin_dir="$HOME/sgoinfre/pgadmin4"
+  local pgadmin_exec="$pgadmin_dir/venv/bin/pgadmin4"
+  local pgadmin_config="$pgadmin_dir/config"
+  local pgadmin_url="http://127.0.0.1:5050"
+  local http_code=""
+
+  subsection "Comprobar respuesta HTTP"
+  show_cmd "curl -s -o /dev/null -w '%{http_code}\\n' $pgadmin_url"
+  if ! command -v curl >/dev/null 2>&1; then
+    warn "curl no está disponible; no se puede comprobar pgAdmin automáticamente"
+    note "Siguiente paso: abre pgAdmin manualmente y confirma que puedes acceder a $pgadmin_url"
+    RESULT["pgadmin"]="unknown"
+    return 0
+  fi
+
+  http_code="$(curl -s -o /dev/null -w '%{http_code}' "$pgadmin_url" 2>/dev/null || true)"
+  if [[ "$http_code" == "200" || "$http_code" == "302" ]]; then
+    ok "pgAdmin está respondiendo en $pgadmin_url (HTTP $http_code)"
+    RESULT["pgadmin"]="yes"
+    note "Siguiente paso: mantén pgAdmin abierto y prepara la conexión a localhost:5432 / piscineds para EX01"
+    return 0
+  fi
+  warn "pgAdmin no está respondiendo en $pgadmin_url (HTTP ${http_code:-sin respuesta})"
+
+  subsection "Comprobar instalación local"
+  show_cmd "ls -ld \"$pgadmin_dir\" \"$pgadmin_exec\" \"$pgadmin_config\""
+  if [[ ! -x "$pgadmin_exec" || ! -d "$pgadmin_config" ]]; then
+    fail "No se encuentra una instalación ejecutable/configurada de pgAdmin"
+    note "Siguiente paso: instala pgAdmin con: cd ex01 && ./install.sh"
+    note "Después vuelve a ejecutar evaluation.sh o arráncalo con: cd ex01 && ./start.sh"
+    RESULT["pgadmin"]="no"
+    return 0
+  fi
+  ok "Instalación local de pgAdmin encontrada"
+
+  echo
+  echo -e "  ${YELLOW}${BOLD}pgAdmin es necesario para demostrar EX01 y revisar visualmente las tablas.${RESET}"
+  echo -e "  ${YELLOW}Se puede arrancar ahora en segundo plano y después comprobar su respuesta HTTP.${RESET}"
+  echo
+  show_cmd "PYTHONPATH=\"$pgadmin_config:\${PYTHONPATH:-}\" \"$pgadmin_exec\" >/tmp/pgadmin4-evaluation.log 2>&1 &"
+  read -r -p "  ¿Quieres arrancar pgAdmin ahora? [s/N] → " answer
+  if [[ ! "${answer:-}" =~ ^[sSyY]$ ]]; then
+    warn "Arranque de pgAdmin cancelado"
+    note "Siguiente paso: inicia pgAdmin manualmente y abre $pgadmin_url antes de EX01"
+    RESULT["pgadmin"]="no"
+    return 0
+  fi
+
+  info "Ejecutando el comando de arranque de pgAdmin…"
+  PYTHONPATH="$pgadmin_config:${PYTHONPATH:-}" "$pgadmin_exec" \
+    >/tmp/pgadmin4-evaluation.log 2>&1 &
+  local pgadmin_pid=$!
+  info "Proceso iniciado con PID $pgadmin_pid"
+
+  local attempt=0
+  while [[ $attempt -lt 20 ]]; do
+    sleep 1
+    http_code="$(curl -s -o /dev/null -w '%{http_code}' "$pgadmin_url" 2>/dev/null || true)"
+    attempt=$((attempt + 1))
+    if [[ "$http_code" == "200" || "$http_code" == "302" ]]; then
+      ok "pgAdmin se ha iniciado correctamente (HTTP $http_code)"
+      RESULT["pgadmin"]="yes"
+      note "Siguiente paso: abre $pgadmin_url y conecta EX01 a localhost:5432 / piscineds"
+      return 0
+    fi
+  done
+
+  fail "pgAdmin no respondió después de 20 segundos (HTTP ${http_code:-sin respuesta})"
+  note "Consulta el registro con: tail -n 40 /tmp/pgadmin4-evaluation.log"
+  note "Siguiente paso: corrige el problema y abre $pgadmin_url antes de continuar con EX01"
+  RESULT["pgadmin"]="no"
+}
+
 check_docker_compose_rules() {
   section "1b · docker-compose.yml (reglas que CIERRAN la evaluación)"
   ctx "Docker Compose describe servicios (p. ej. PostgreSQL) en un YAML."
@@ -1127,6 +1206,7 @@ summary() {
   echo -e "  ${BOLD}Checklist hoja de evaluación${RESET}"
   echo -e "  ─────────────────────────────────────"
   printf "  %-12s %s\n" "subject/ CSV" "${RESULT[subject]:-—}"
+  printf "  %-12s %s\n" "pgAdmin" "${RESULT[pgadmin]:-—}"
   printf "  %-12s %s\n" "Ex00" "${RESULT[ex00]:-—}"
   printf "  %-12s %s\n" "Ex01" "${RESULT[ex01]:-—}"
   printf "  %-12s %s\n" "Ex02" "${RESULT[ex02]:-—}"
@@ -1178,6 +1258,7 @@ main() {
   check_structure
   check_subject_data
   check_existing_runtime
+  check_pgadmin_runtime
   check_docker_compose_rules || true
   [[ "$STOP_EVAL" == true ]] && summary && exit 0
   check_dockerfile_rules || true
